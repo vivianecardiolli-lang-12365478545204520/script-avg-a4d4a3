@@ -1,4 +1,4 @@
-﻿-- limpa formatação de números (ex: 133,260 -> 133260)
+-- limpa formatação de números (ex: 133,260 -> 133260)
 local function normalizeNumber(text)
 
     if not text then

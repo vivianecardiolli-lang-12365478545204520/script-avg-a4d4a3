@@ -1,4 +1,4 @@
-﻿local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
 local config = require("core.config")
@@ -10,6 +10,16 @@ local SheetsClient = {}
 local player = Players.LocalPlayer
 
 function SheetsClient.send(data)
+    if config.tracker.webhookUrl == "" then
+        Logger.log("webhookUrl não configurada em SCRIPT_AVG_CONFIG.tracker.webhookUrl")
+        return false
+    end
+
+    if config.tracker.secretToken == "" then
+        Logger.log("secretToken não configurado em SCRIPT_AVG_CONFIG.tracker.secretToken")
+        return false
+    end
+
     local payload = {
         player = player.Name,
         displayName = player.DisplayName,

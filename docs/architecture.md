@@ -1,4 +1,4 @@
-﻿# Arquitetura do Projeto
+# Arquitetura do Projeto
 
 ## Estrutura
 
@@ -20,6 +20,22 @@
 - Configure `baseUrl` em `main.lua` apontando para a pasta `src/` hospedada.
 - Execute `main.lua` no executor.
 - Os módulos são carregados via HTTP sob demanda e com cache em memória.
+
+Exemplo de configuração sensível em runtime (sem publicar token no GitHub):
+
+```lua
+getgenv().SCRIPT_AVG_CONFIG = {
+    tracker = {
+        webhookUrl = "SUA_URL_PRIVADA",
+        secretToken = "SEU_TOKEN_PRIVADO",
+        intervalMinutes = 5,
+        retry = {
+            maxRetries = 3,
+            retryDelaySeconds = 2,
+        },
+    },
+}
+```
 
 Exemplo de URL base:
 

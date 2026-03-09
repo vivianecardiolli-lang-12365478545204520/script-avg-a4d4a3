@@ -1,24 +1,40 @@
-﻿local config = {}
+local runtimeConfig = {}
+if getgenv then
+    runtimeConfig = getgenv().SCRIPT_AVG_CONFIG or {}
+end
 
+local function pick(value, defaultValue)
+    if value == nil then
+        return defaultValue
+    end
+    return value
+end
+
+local config = {}
+
+local rewardOverrides = runtimeConfig.rewards or {}
 config.rewards = {
-    NewPlayerRewards = 7,
-    PirateRewards = 7,
-    SpecialRewards = 7,
-    WinterRewards = 7,
+    NewPlayerRewards = pick(rewardOverrides.NewPlayerRewards, 7),
+    PirateRewards = pick(rewardOverrides.PirateRewards, 7),
+    SpecialRewards = pick(rewardOverrides.SpecialRewards, 7),
+    WinterRewards = pick(rewardOverrides.WinterRewards, 7),
 }
 
+local trackerOverrides = runtimeConfig.tracker or {}
+local retryOverrides = trackerOverrides.retry or {}
 config.tracker = {
-    webhookUrl = "https://script.google.com/macros/s/AKfycbz-AVeJQyHfYi03z1nR9-XZilDK8AbuooodJRLD6BiDY6zntd-GlDHhX3r1ZzDwZI0/exec",
-    secretToken = "MEU_TOKEN_SUPER_SECRETO_123",
-    intervalMinutes = 5,
+    webhookUrl = pick(trackerOverrides.webhookUrl, ""),
+    secretToken = pick(trackerOverrides.secretToken, ""),
+    intervalMinutes = pick(trackerOverrides.intervalMinutes, 5),
     retry = {
-        maxRetries = 3,
-        retryDelaySeconds = 2,
+        maxRetries = pick(retryOverrides.maxRetries, 3),
+        retryDelaySeconds = pick(retryOverrides.retryDelaySeconds, 2),
     },
 }
 
+local loggerOverrides = runtimeConfig.logger or {}
 config.logger = {
-    exportToClipboard = false,
+    exportToClipboard = pick(loggerOverrides.exportToClipboard, false),
 }
 
 return config

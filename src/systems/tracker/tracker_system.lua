@@ -1,4 +1,4 @@
-﻿local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 
 local config = require("core.config")
 local SheetsClient = require("integrations.sheets_client")

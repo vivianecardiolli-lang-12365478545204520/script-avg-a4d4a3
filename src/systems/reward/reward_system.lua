@@ -1,4 +1,4 @@
-﻿local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local config = require("core.config")
 local Logger = require("core.logger")

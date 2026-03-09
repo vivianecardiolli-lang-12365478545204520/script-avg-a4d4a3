@@ -1,4 +1,4 @@
-﻿local HttpLoader = {
+local HttpLoader = {
     baseUrl = "https://raw.githubusercontent.com/vivianecardiolli-lang-12365478545204520/script-avg-a4d4a3/refs/heads/main/src/",
 }
 
