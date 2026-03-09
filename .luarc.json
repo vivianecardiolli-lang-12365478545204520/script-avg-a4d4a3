@@ -1,0 +1,18 @@
+﻿{
+  "Lua.workspace.library": [
+    "src"
+  ],
+  "Lua.diagnostics.globals": [
+    "game",
+    "workspace",
+    "script",
+    "getgenv",
+    "firesignal",
+    "request",
+    "readfile",
+    "loadstring",
+    "setclipboard",
+    "task",
+    "tick"
+  ]
+}

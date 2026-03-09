@@ -1,0 +1,35 @@
+1️⃣ Ver o que mudou (opcional)
+git status
+
+Isso mostra os arquivos modificados.
+
+2️⃣ Adicionar as mudanças
+git add .
+
+O . significa todos os arquivos modificados.
+
+3️⃣ Criar um commit
+git commit -m "descrição da mudança"
+
+Exemplo:
+
+git commit -m "added winter rewards system"
+4️⃣ Enviar para o GitHub
+git push
+
+Pronto. O GitHub será atualizado.
+
+
+📜 Histórico de commits
+
+Você pode ver tudo que já fez:
+
+git log
+
+Vai mostrar algo tipo:
+
+commit 724c97c
+initial commit
+
+commit 91a1d33
+added winter rewards
