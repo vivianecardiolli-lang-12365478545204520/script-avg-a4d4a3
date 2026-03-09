@@ -1,5 +1,5 @@
 ﻿local HttpLoader = {
-    baseUrl = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/src/",
+    baseUrl = "https://raw.githubusercontent.com/vivianecardiolli-lang-12365478545204520/script-avg-a4d4a3/refs/heads/main/src/",
 }
 
 local moduleCache = {}
