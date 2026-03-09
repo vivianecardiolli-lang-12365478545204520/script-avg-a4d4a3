@@ -4,9 +4,14 @@ local Tracker = require("systems.tracker.tracker_system")
 local App = {}
 
 function App.run()
-    RewardSystem.run()
-    Tracker.sendNow()
-    Tracker.startLoop()
+    task.spawn(function()
+        Tracker.startLoop()
+    end)
+
+    task.spawn(function()
+        RewardSystem.run()
+        Tracker.sendNow()
+    end)
 end
 
 return App
