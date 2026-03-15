@@ -72,11 +72,24 @@ local function fireButton(button)
         return false
     end
 
-    local ok = pcall(function()
+    local fired = false
+
+    local okActivated = pcall(function()
         firesignal(button.Activated)
     end)
+    fired = fired or okActivated
 
-    return ok
+    local okMouse = pcall(function()
+        firesignal(button.MouseButton1Click)
+    end)
+    fired = fired or okMouse
+
+    local okActivateMethod = pcall(function()
+        button:Activate()
+    end)
+    fired = fired or okActivateMethod
+
+    return fired
 end
 
 local function findBannerButtonByType(holder, typeName)
@@ -168,22 +181,27 @@ function DailyStateReader.closeMenu()
         return false
     end
 
-    local buttonToFire = nil
+    local candidates = {}
+    local nested = close:FindFirstChild("Button")
+    if nested and nested:IsA("GuiButton") then
+        table.insert(candidates, nested)
+    end
     if close:IsA("GuiButton") then
-        buttonToFire = close
-    else
-        local nested = close:FindFirstChild("Button")
-        if nested and nested:IsA("GuiButton") then
-            buttonToFire = nested
+        table.insert(candidates, close)
+    end
+
+    for _, button in ipairs(candidates) do
+        if fireButton(button) then
+            task.wait(0.2)
+
+            holder = getHolder()
+            if not holder or not holder:IsA("GuiObject") or not holder.Visible then
+                return true
+            end
         end
     end
 
-    if not fireButton(buttonToFire) then
-        return false
-    end
-
-    task.wait(0.2)
-    return true
+    return false
 end
 
 function DailyStateReader.read()
