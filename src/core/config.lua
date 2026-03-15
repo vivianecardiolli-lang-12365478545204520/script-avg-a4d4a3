@@ -18,6 +18,10 @@ config.rewards = {
     PirateRewards = pick(rewardOverrides.PirateRewards, 7),
     SpecialRewards = pick(rewardOverrides.SpecialRewards, 7),
     WinterRewards = pick(rewardOverrides.WinterRewards, 7),
+    EnableNewPlayerRewards = pick(rewardOverrides.EnableNewPlayerRewards, true),
+    EnablePirateRewards = pick(rewardOverrides.EnablePirateRewards, true),
+    EnableSpecialRewards = pick(rewardOverrides.EnableSpecialRewards, true),
+    EnableWinterRewards = pick(rewardOverrides.EnableWinterRewards, true),
 }
 
 local trackerOverrides = runtimeConfig.tracker or {}
