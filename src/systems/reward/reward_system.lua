@@ -30,7 +30,21 @@ local function shuffleArray(values)
     end
 end
 
-local function getDailyClaimPlan(maxRewards)
+local function getDailyClaimPlan(typeName, maxRewards)
+    if not DailyStateReader.ensureMenuOpen() then
+        return {
+            days = {},
+            summary = "DailyRewards UI not found",
+        }
+    end
+
+    if not DailyStateReader.selectType(typeName) then
+        return {
+            days = {},
+            summary = "Daily reward type tab not found: " .. tostring(typeName),
+        }
+    end
+
     local snapshot = DailyStateReader.read()
     if not snapshot.listFound then
         return {
@@ -100,7 +114,7 @@ end
 local function claimDaily(typeName, maxRewards)
     Logger.log("Starting DailyReward " .. typeName)
 
-    local claimPlan = getDailyClaimPlan(maxRewards)
+    local claimPlan = getDailyClaimPlan(typeName, maxRewards)
     Logger.log(claimPlan.summary)
 
     if #claimPlan.days == 0 then

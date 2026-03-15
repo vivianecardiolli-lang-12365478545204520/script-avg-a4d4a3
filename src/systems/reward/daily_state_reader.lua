@@ -52,20 +52,114 @@ local function resolveState(frame)
     return "unknown"
 end
 
-function DailyStateReader.read()
+local function getPlayerGui()
     local player = Players.LocalPlayer
     if not player then
-        return {
-            listFound = false,
-            cards = {},
-        }
+        return nil
     end
 
-    local playerGui = player:FindFirstChild("PlayerGui")
-    local dailyRewards = playerGui and playerGui:FindFirstChild("DailyRewards")
-    local holder = dailyRewards and dailyRewards:FindFirstChild("Holder")
-    local rewardsList = holder and holder:FindFirstChild("RewardsList")
+    return player:FindFirstChild("PlayerGui")
+end
 
+local function getHolder()
+    local playerGui = getPlayerGui()
+    local dailyRewards = playerGui and playerGui:FindFirstChild("DailyRewards")
+    return dailyRewards and dailyRewards:FindFirstChild("Holder")
+end
+
+local function fireButton(button)
+    if not button or not button:IsA("GuiButton") then
+        return false
+    end
+
+    local ok = pcall(function()
+        firesignal(button.Activated)
+    end)
+
+    return ok
+end
+
+local function findBannerButtonByType(holder, typeName)
+    local rewardTypes = holder and holder:FindFirstChild("RewardTypes")
+    if not rewardTypes then
+        return nil
+    end
+
+    local expected = string.upper(typeName or "")
+    for _, child in ipairs(rewardTypes:GetChildren()) do
+        if child:IsA("Frame") and child.Name == "BaseBanner" then
+            local bannerType = child:FindFirstChild("BannerType")
+            local label = bannerType and bannerType:IsA("TextLabel") and bannerType
+            local text = getLabelText(label)
+            if text == expected then
+                local button = child:FindFirstChild("Button")
+                if button and button:IsA("GuiButton") then
+                    return button
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+function DailyStateReader.ensureMenuOpen()
+    local holder = getHolder()
+    if holder and holder:IsA("GuiObject") and holder.Visible then
+        return true
+    end
+
+    local playerGui = getPlayerGui()
+    local hud = playerGui and playerGui:FindFirstChild("HUD")
+    local sideButtons = hud and hud:FindFirstChild("SideButtons")
+    local dailyButton = sideButtons and sideButtons:FindFirstChild("DailyRewardsButton")
+
+    if not dailyButton then
+        return false
+    end
+
+    local buttonToFire = nil
+    if dailyButton:IsA("GuiButton") then
+        buttonToFire = dailyButton
+    else
+        local nested = dailyButton:FindFirstChild("Button")
+        if nested and nested:IsA("GuiButton") then
+            buttonToFire = nested
+        end
+    end
+
+    if not fireButton(buttonToFire) then
+        return false
+    end
+
+    task.wait(0.35)
+
+    holder = getHolder()
+    return holder ~= nil
+end
+
+function DailyStateReader.selectType(typeName)
+    local holder = getHolder()
+    if not holder then
+        return false
+    end
+
+    local button = findBannerButtonByType(holder, typeName)
+    if not button then
+        return false
+    end
+
+    if not fireButton(button) then
+        return false
+    end
+
+    task.wait(0.25)
+    return true
+end
+
+function DailyStateReader.read()
+    local holder = getHolder()
+    local rewardsList = holder and holder:FindFirstChild("RewardsList")
     if not rewardsList then
         return {
             listFound = false,
