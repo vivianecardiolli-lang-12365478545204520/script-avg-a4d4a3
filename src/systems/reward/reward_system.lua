@@ -52,7 +52,7 @@ local function shuffleArray(values)
     end
 end
 
-local function getDailyClaimPlan(typeName, maxRewards)
+local function getDailyClaimPlan(typeName)
     if not DailyStateReader.ensureMenuOpen() then
         return {
             days = {},
@@ -124,17 +124,16 @@ local function getDailyClaimPlan(typeName, maxRewards)
             counts.unknown
         ),
         details = string.format(
-            "Daily days available=[%s] claimed=[%s] locked=[%s] unknown=[%s] (limit=%s ignored)",
+            "Daily days available=[%s] claimed=[%s] locked=[%s] unknown=[%s]",
             formatDays(availableDays),
             formatDays(claimedDays),
             formatDays(lockedDays),
-            formatDays(unknownDays),
-            tostring(maxRewards)
+            formatDays(unknownDays)
         ),
     }
 end
 
-local function getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
+local function getEventClaimPlan(guiName, sidebarButtonName)
     if not EventRewardReader.ensureMenuOpen(guiName, sidebarButtonName) then
         return {
             days = {},
@@ -195,20 +194,19 @@ local function getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
             counts.unknown
         ),
         details = string.format(
-            "%s days available=[%s] claimed=[%s] unknown=[%s] (limit=%s ignored)",
+            "%s days available=[%s] claimed=[%s] unknown=[%s]",
             guiName,
             formatDays(availableDays),
             formatDays(claimedDays),
-            formatDays(unknownDays),
-            tostring(maxRewards)
+            formatDays(unknownDays)
         ),
     }
 end
 
-local function claimRewards(remote, maxRewards, guiName, sidebarButtonName)
+local function claimRewards(remote, guiName, sidebarButtonName)
     Logger.log("Starting " .. remote.Name)
 
-    local claimPlan = getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
+    local claimPlan = getEventClaimPlan(guiName, sidebarButtonName)
     Logger.log(claimPlan.summary)
     Logger.log(claimPlan.details)
 
@@ -244,10 +242,10 @@ local function claimRewards(remote, maxRewards, guiName, sidebarButtonName)
     Logger.log("Finished " .. remote.Name)
 end
 
-local function claimDaily(typeName, maxRewards)
+local function claimDaily(typeName)
     Logger.log("Starting DailyReward " .. typeName)
 
-    local claimPlan = getDailyClaimPlan(typeName, maxRewards)
+    local claimPlan = getDailyClaimPlan(typeName)
     Logger.log(claimPlan.summary)
     Logger.log(claimPlan.details)
 
@@ -285,28 +283,28 @@ end
 
 function RewardSystem.run()
     if config.rewards.EnableNewPlayerRewards then
-        claimRewards(newPlayerRemote, config.rewards.NewPlayerRewards, "NewPlayers", "ReturningPlayerRewards")
+        claimRewards(newPlayerRemote, "NewPlayers", "ReturningPlayerRewards")
         waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping NewPlayerRewards (disabled by config)")
     end
 
     if config.rewards.EnablePirateRewards then
-        claimRewards(pirateRemote, config.rewards.PirateRewards, "APiratesWelcome", "APiratesWelcomeRewards")
+        claimRewards(pirateRemote, "APiratesWelcome", "APiratesWelcomeRewards")
         waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping PirateRewards (disabled by config)")
     end
 
     if config.rewards.EnableSpecialRewards then
-        claimDaily("Special", config.rewards.SpecialRewards)
+        claimDaily("Special")
         waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping DailyReward Special (disabled by config)")
     end
 
     if config.rewards.EnableWinterRewards then
-        claimDaily("Winter", config.rewards.WinterRewards)
+        claimDaily("Winter")
     else
         Logger.log("Skipping DailyReward Winter (disabled by config)")
     end

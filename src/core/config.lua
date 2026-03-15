@@ -14,10 +14,6 @@ local config = {}
 
 local rewardOverrides = runtimeConfig.rewards or {}
 config.rewards = {
-    NewPlayerRewards = pick(rewardOverrides.NewPlayerRewards, 7),
-    PirateRewards = pick(rewardOverrides.PirateRewards, 7),
-    SpecialRewards = pick(rewardOverrides.SpecialRewards, 7),
-    WinterRewards = pick(rewardOverrides.WinterRewards, 7),
     EnableNewPlayerRewards = pick(rewardOverrides.EnableNewPlayerRewards, true),
     EnablePirateRewards = pick(rewardOverrides.EnablePirateRewards, true),
     EnableSpecialRewards = pick(rewardOverrides.EnableSpecialRewards, true),
