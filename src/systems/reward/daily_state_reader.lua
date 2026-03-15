@@ -157,6 +157,35 @@ function DailyStateReader.selectType(typeName)
     return true
 end
 
+function DailyStateReader.closeMenu()
+    local holder = getHolder()
+    if not holder or not holder:IsA("GuiObject") or not holder.Visible then
+        return true
+    end
+
+    local close = holder:FindFirstChild("Close")
+    if not close then
+        return false
+    end
+
+    local buttonToFire = nil
+    if close:IsA("GuiButton") then
+        buttonToFire = close
+    else
+        local nested = close:FindFirstChild("Button")
+        if nested and nested:IsA("GuiButton") then
+            buttonToFire = nested
+        end
+    end
+
+    if not fireButton(buttonToFire) then
+        return false
+    end
+
+    task.wait(0.2)
+    return true
+end
+
 function DailyStateReader.read()
     local holder = getHolder()
     local rewardsList = holder and holder:FindFirstChild("RewardsList")

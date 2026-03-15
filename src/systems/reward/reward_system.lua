@@ -119,6 +119,9 @@ local function claimDaily(typeName, maxRewards)
 
     if #claimPlan.days == 0 then
         Logger.log("No available daily rewards for " .. typeName)
+        if not DailyStateReader.closeMenu() then
+            Logger.log("Failed to close DailyRewards menu after empty plan")
+        end
         Logger.log("Finished DailyReward " .. typeName)
         return
     end
@@ -137,6 +140,10 @@ local function claimDaily(typeName, maxRewards)
         if i % rng:NextInteger(3, 5) == 0 then
             waitRandom(1.1, 2.1)
         end
+    end
+
+    if not DailyStateReader.closeMenu() then
+        Logger.log("Failed to close DailyRewards menu after claims")
     end
 
     Logger.log("Finished DailyReward " .. typeName)
