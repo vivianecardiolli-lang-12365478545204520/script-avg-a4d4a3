@@ -36,17 +36,19 @@ local function resolveState(frame)
 
     local lockedFrame = frame:FindFirstChild("LockedFrame")
     local lockedVisible = lockedFrame and lockedFrame:IsA("GuiObject") and lockedFrame.Visible
-
-    if bottomText == "CLAIM" then
-        return "available"
-    end
+    local lockIcon = lockedFrame and lockedFrame:FindFirstChild("Lock")
+    local lockIconVisible = lockIcon and lockIcon:IsA("GuiObject") and lockIcon.Visible
 
     if bottomText == "CLAIMED" then
         return "claimed"
     end
 
-    if lockedVisible then
+    if lockedVisible or lockIconVisible then
         return "locked"
+    end
+
+    if bottomText == "CLAIM" then
+        return "available"
     end
 
     return "unknown"
