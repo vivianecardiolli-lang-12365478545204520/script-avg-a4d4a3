@@ -23,9 +23,26 @@ local EVENT_MIN_DELAY = 0.35
 local EVENT_MAX_DELAY = 0.95
 local EVENT_POST_CLAIM_MIN_DELAY = 0.35
 local EVENT_POST_CLAIM_MAX_DELAY = 0.75
+local MENU_SWITCH_MIN_DELAY = 0.8
+local MENU_SWITCH_MAX_DELAY = 1.9
 
 local function waitRandom(minSeconds, maxSeconds)
     task.wait(rng:NextNumber(minSeconds, maxSeconds))
+end
+
+local function formatDays(days)
+    if #days == 0 then
+        return "none"
+    end
+
+    table.sort(days)
+
+    local parts = {}
+    for _, day in ipairs(days) do
+        table.insert(parts, tostring(day))
+    end
+
+    return table.concat(parts, ",")
 end
 
 local function shuffleArray(values)
@@ -66,14 +83,23 @@ local function getDailyClaimPlan(typeName, maxRewards)
     }
 
     local availableDays = {}
+    local claimedDays = {}
+    local lockedDays = {}
+    local unknownDays = {}
     for _, card in ipairs(snapshot.cards) do
         local state = card.state or "unknown"
         if counts[state] ~= nil then
             counts[state] = counts[state] + 1
         end
 
-        if state == "available" and card.dayIndex and card.dayIndex >= 1 and card.dayIndex <= maxRewards then
+        if state == "available" and card.dayIndex then
             table.insert(availableDays, card.dayIndex)
+        elseif state == "claimed" and card.dayIndex then
+            table.insert(claimedDays, card.dayIndex)
+        elseif state == "locked" and card.dayIndex then
+            table.insert(lockedDays, card.dayIndex)
+        elseif state == "unknown" and card.dayIndex then
+            table.insert(unknownDays, card.dayIndex)
         end
     end
 
@@ -96,6 +122,14 @@ local function getDailyClaimPlan(typeName, maxRewards)
             counts.claimed,
             counts.locked,
             counts.unknown
+        ),
+        details = string.format(
+            "Daily days available=[%s] claimed=[%s] locked=[%s] unknown=[%s] (limit=%s ignored)",
+            formatDays(availableDays),
+            formatDays(claimedDays),
+            formatDays(lockedDays),
+            formatDays(unknownDays),
+            tostring(maxRewards)
         ),
     }
 end
@@ -123,14 +157,20 @@ local function getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
     }
 
     local availableDays = {}
+    local claimedDays = {}
+    local unknownDays = {}
     for _, card in ipairs(snapshot.cards) do
         local state = card.state or "unknown"
         if counts[state] ~= nil then
             counts[state] = counts[state] + 1
         end
 
-        if state == "available" and card.dayIndex and card.dayIndex >= 1 and card.dayIndex <= maxRewards then
+        if state == "available" and card.dayIndex then
             table.insert(availableDays, card.dayIndex)
+        elseif state == "claimed" and card.dayIndex then
+            table.insert(claimedDays, card.dayIndex)
+        elseif state == "unknown" and card.dayIndex then
+            table.insert(unknownDays, card.dayIndex)
         end
     end
 
@@ -154,6 +194,14 @@ local function getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
             counts.claimed,
             counts.unknown
         ),
+        details = string.format(
+            "%s days available=[%s] claimed=[%s] unknown=[%s] (limit=%s ignored)",
+            guiName,
+            formatDays(availableDays),
+            formatDays(claimedDays),
+            formatDays(unknownDays),
+            tostring(maxRewards)
+        ),
     }
 end
 
@@ -162,6 +210,7 @@ local function claimRewards(remote, maxRewards, guiName, sidebarButtonName)
 
     local claimPlan = getEventClaimPlan(guiName, sidebarButtonName, maxRewards)
     Logger.log(claimPlan.summary)
+    Logger.log(claimPlan.details)
 
     if #claimPlan.days == 0 then
         Logger.log("No available rewards for " .. remote.Name)
@@ -200,6 +249,7 @@ local function claimDaily(typeName, maxRewards)
 
     local claimPlan = getDailyClaimPlan(typeName, maxRewards)
     Logger.log(claimPlan.summary)
+    Logger.log(claimPlan.details)
 
     if #claimPlan.days == 0 then
         Logger.log("No available daily rewards for " .. typeName)
@@ -236,21 +286,21 @@ end
 function RewardSystem.run()
     if config.rewards.EnableNewPlayerRewards then
         claimRewards(newPlayerRemote, config.rewards.NewPlayerRewards, "NewPlayers", "ReturningPlayerRewards")
-        task.wait(1)
+        waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping NewPlayerRewards (disabled by config)")
     end
 
     if config.rewards.EnablePirateRewards then
         claimRewards(pirateRemote, config.rewards.PirateRewards, "APiratesWelcome", "APiratesWelcomeRewards")
-        task.wait(1)
+        waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping PirateRewards (disabled by config)")
     end
 
     if config.rewards.EnableSpecialRewards then
         claimDaily("Special", config.rewards.SpecialRewards)
-        task.wait(1)
+        waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping DailyReward Special (disabled by config)")
     end

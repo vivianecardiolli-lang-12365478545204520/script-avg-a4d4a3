@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local EventRewardReader = {}
 
@@ -33,6 +34,31 @@ local function fireButton(button)
     return fired
 end
 
+local function clickAt(x, y)
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1)
+    task.wait()
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
+end
+
+local function clickCloseFallback(holder)
+    if not holder or not holder:IsA("GuiObject") then
+        return false
+    end
+
+    local pos = holder.AbsolutePosition
+    local size = holder.AbsoluteSize
+    if size.X <= 0 or size.Y <= 0 then
+        return false
+    end
+
+    local x = math.floor(pos.X + (size.X * 0.96))
+    local y = math.floor(pos.Y + (size.Y * 0.06))
+    clickAt(x, y)
+    task.wait(0.2)
+
+    return true
+end
+
 local function getHolder(guiName)
     local playerGui = getPlayerGui()
     local eventGui = playerGui and playerGui:FindFirstChild(guiName)
@@ -40,37 +66,39 @@ local function getHolder(guiName)
 end
 
 function EventRewardReader.ensureMenuOpen(guiName, sidebarButtonName)
-    local holder = getHolder(guiName)
-    if holder and holder:IsA("GuiObject") and holder.Visible then
-        return true
-    end
-
-    local playerGui = getPlayerGui()
-    local hud = playerGui and playerGui:FindFirstChild("HUD")
-    local sideButtons = hud and hud:FindFirstChild("SideButtons")
-    local sidebarButton = sideButtons and sideButtons:FindFirstChild(sidebarButtonName)
-    if not sidebarButton then
-        return false
-    end
-
-    local buttonToFire = nil
-    if sidebarButton:IsA("GuiButton") then
-        buttonToFire = sidebarButton
-    else
-        local nested = sidebarButton:FindFirstChild("Button")
-        if nested and nested:IsA("GuiButton") then
-            buttonToFire = nested
+    for _ = 1, 3 do
+        local holder = getHolder(guiName)
+        if holder and holder:IsA("GuiObject") and holder.Visible then
+            return true
         end
+
+        local playerGui = getPlayerGui()
+        local hud = playerGui and playerGui:FindFirstChild("HUD")
+        local sideButtons = hud and hud:FindFirstChild("SideButtons")
+        local sidebarButton = sideButtons and sideButtons:FindFirstChild(sidebarButtonName)
+        if not sidebarButton then
+            return false
+        end
+
+        local buttonToFire = nil
+        if sidebarButton:IsA("GuiButton") then
+            buttonToFire = sidebarButton
+        else
+            local nested = sidebarButton:FindFirstChild("Button")
+            if nested and nested:IsA("GuiButton") then
+                buttonToFire = nested
+            end
+        end
+
+        if not fireButton(buttonToFire) then
+            return false
+        end
+
+        task.wait(0.35)
     end
 
-    if not fireButton(buttonToFire) then
-        return false
-    end
-
-    task.wait(0.35)
-    holder = getHolder(guiName)
-
-    return holder ~= nil
+    local holder = getHolder(guiName)
+    return holder ~= nil and holder.Visible
 end
 
 function EventRewardReader.closeMenu(guiName)
@@ -101,6 +129,14 @@ function EventRewardReader.closeMenu(guiName)
             if not holder or not holder:IsA("GuiObject") or not holder.Visible then
                 return true
             end
+        end
+    end
+
+    holder = getHolder(guiName)
+    if clickCloseFallback(holder) then
+        holder = getHolder(guiName)
+        if not holder or not holder:IsA("GuiObject") or not holder.Visible then
+            return true
         end
     end
 

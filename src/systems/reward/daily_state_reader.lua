@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local DailyStateReader = {}
 
@@ -94,6 +95,31 @@ local function fireButton(button)
     return fired
 end
 
+local function clickAt(x, y)
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1)
+    task.wait()
+    VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
+end
+
+local function clickCloseFallback(holder)
+    if not holder or not holder:IsA("GuiObject") then
+        return false
+    end
+
+    local pos = holder.AbsolutePosition
+    local size = holder.AbsoluteSize
+    if size.X <= 0 or size.Y <= 0 then
+        return false
+    end
+
+    local x = math.floor(pos.X + (size.X * 0.96))
+    local y = math.floor(pos.Y + (size.Y * 0.06))
+    clickAt(x, y)
+    task.wait(0.2)
+
+    return true
+end
+
 local function findBannerButtonByType(holder, typeName)
     local rewardTypes = holder and holder:FindFirstChild("RewardTypes")
     if not rewardTypes then
@@ -119,57 +145,61 @@ local function findBannerButtonByType(holder, typeName)
 end
 
 function DailyStateReader.ensureMenuOpen()
-    local holder = getHolder()
-    if holder and holder:IsA("GuiObject") and holder.Visible then
-        return true
-    end
-
-    local playerGui = getPlayerGui()
-    local hud = playerGui and playerGui:FindFirstChild("HUD")
-    local sideButtons = hud and hud:FindFirstChild("SideButtons")
-    local dailyButton = sideButtons and sideButtons:FindFirstChild("DailyRewardsButton")
-
-    if not dailyButton then
-        return false
-    end
-
-    local buttonToFire = nil
-    if dailyButton:IsA("GuiButton") then
-        buttonToFire = dailyButton
-    else
-        local nested = dailyButton:FindFirstChild("Button")
-        if nested and nested:IsA("GuiButton") then
-            buttonToFire = nested
+    for _ = 1, 3 do
+        local holder = getHolder()
+        if holder and holder:IsA("GuiObject") and holder.Visible then
+            return true
         end
+
+        local playerGui = getPlayerGui()
+        local hud = playerGui and playerGui:FindFirstChild("HUD")
+        local sideButtons = hud and hud:FindFirstChild("SideButtons")
+        local dailyButton = sideButtons and sideButtons:FindFirstChild("DailyRewardsButton")
+
+        if not dailyButton then
+            return false
+        end
+
+        local buttonToFire = nil
+        if dailyButton:IsA("GuiButton") then
+            buttonToFire = dailyButton
+        else
+            local nested = dailyButton:FindFirstChild("Button")
+            if nested and nested:IsA("GuiButton") then
+                buttonToFire = nested
+            end
+        end
+
+        if not fireButton(buttonToFire) then
+            return false
+        end
+
+        task.wait(0.35)
     end
 
-    if not fireButton(buttonToFire) then
-        return false
-    end
-
-    task.wait(0.35)
-
-    holder = getHolder()
-    return holder ~= nil
+    local holder = getHolder()
+    return holder ~= nil and holder.Visible
 end
 
 function DailyStateReader.selectType(typeName)
-    local holder = getHolder()
-    if not holder then
-        return false
+    for _ = 1, 3 do
+        local holder = getHolder()
+        if not holder then
+            return false
+        end
+
+        local button = findBannerButtonByType(holder, typeName)
+        if not button then
+            return false
+        end
+
+        if fireButton(button) then
+            task.wait(0.25)
+            return true
+        end
     end
 
-    local button = findBannerButtonByType(holder, typeName)
-    if not button then
-        return false
-    end
-
-    if not fireButton(button) then
-        return false
-    end
-
-    task.wait(0.25)
-    return true
+    return false
 end
 
 function DailyStateReader.closeMenu()
@@ -200,6 +230,14 @@ function DailyStateReader.closeMenu()
             if not holder or not holder:IsA("GuiObject") or not holder.Visible then
                 return true
             end
+        end
+    end
+
+    holder = getHolder()
+    if clickCloseFallback(holder) then
+        holder = getHolder()
+        if not holder or not holder:IsA("GuiObject") or not holder.Visible then
+            return true
         end
     end
 
