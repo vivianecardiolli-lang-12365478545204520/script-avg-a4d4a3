@@ -1,0 +1,18 @@
+--- MAPA DE INTERACOES ---
+[TOUCH] Em: Circle | Rota: game.Workspace.MainLobby.Centre.Platform (takes player to 2nd floor).Platform.Circle
+[TOUCH] Em: Circle | Rota: game.Workspace.MainLobby.Centre.Platform (takes player to 2nd floor).Platform.Circle
+[TOUCH] Em: Circle | Rota: game.Workspace.MainLobby.Centre.Platform (takes player to 2nd floor).Platform.Circle
+[TOUCH] Em: Circle | Rota: game.Workspace.MainLobby.Centre.Platform (takes player to 2nd floor).Platform.Circle
+[PROMPT] HalloweenShop | Rota: game.Workspace.MainLobby.NPC.Savior (Rebirth).HalloweenShop
+[PROMPT] WorldDestroyer | Rota: game.Workspace.MainLobby.NPC.World Destroyer.WorldDestroyer
+[PROMPT] Leaderboard | Rota: game.Workspace.MainLobby.NPC.LB.Leaderboard
+[PROMPT] Boss Event | Rota: game.Workspace.MainLobby.NPC.Arin.Boss Event
+[PROMPT] Summon | Rota: game.Workspace.MainLobby.NPC.Hercool.Summon
+[PROMPT] Custom Levels | Rota: game.Workspace.MainLobby.NPC.Cat (Stupid).Custom Levels
+[PROMPT] Trophy Exchange | Rota: game.Workspace.MainLobby.NPC.Foboko.Trophy Exchange
+[PROMPT] Odyssey | Rota: game.Workspace.MainLobby.NPC.Archer (Counter Spirit).Odyssey
+[PROMPT] PVP | Rota: game.Workspace.MainLobby.NPC.PVPMatchmaking.PrimaryPart.PVP
+[PROMPT] PVPLeaderboards | Rota: game.Workspace.MainLobby.NPC.PVPLeaderboards.PrimaryPart.PVPLeaderboards
+[PROMPT] Time Chamber | Rota: game.Workspace.MainLobby.NPC.Rocket.Time Chamber
+[PROMPT] Normalize | Rota: game.Workspace.MainLobby.NPC.Valentine.Normalize
+[PROMPT] Collection | Rota: game.Workspace.MainLobby.NPC.Genas.Collection
