@@ -251,18 +251,19 @@ local function resolveCardState(card)
     local checkMark = card:FindFirstChild("CheckMark")
     local darkFrame = card:FindFirstChild("DarkFrame")
 
+    local hasCheckMarkNode = checkMark ~= nil
     local checkVisible = checkMark and checkMark:IsA("GuiObject") and checkMark.Visible
     local darkVisible = darkFrame and darkFrame:IsA("GuiObject") and darkFrame.Visible
 
     if checkVisible then
-        return "claimed", checkVisible, darkVisible
+        return "claimed", hasCheckMarkNode, checkVisible, darkVisible
     end
 
     if darkVisible then
-        return "locked", checkVisible, darkVisible
+        return "locked", hasCheckMarkNode, checkVisible, darkVisible
     end
 
-    return "available", checkVisible, darkVisible
+    return "available", hasCheckMarkNode, checkVisible, darkVisible
 end
 
 function LevelMilestonesReader.read()
@@ -281,10 +282,11 @@ function LevelMilestonesReader.read()
         if child:IsA("Frame") then
             local level = parseCardLevel(child)
             if level then
-                local state, checkVisible, darkVisible = resolveCardState(child)
+                local state, hasCheckMarkNode, checkVisible, darkVisible = resolveCardState(child)
                 table.insert(cards, {
                     level = level,
                     state = state,
+                    hasCheckMarkNode = hasCheckMarkNode,
                     checkVisible = checkVisible,
                     darkVisible = darkVisible,
                 })

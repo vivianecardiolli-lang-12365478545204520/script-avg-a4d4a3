@@ -219,6 +219,32 @@ local function getHumanoidRootPart()
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
+local function isClaimStrokeDark(color)
+    if not color then
+        return false
+    end
+    return (color.R + color.G + color.B) < 0.30
+end
+
+local function isMilestoneClaimUiAvailable(claimUi)
+    if not claimUi then
+        return false
+    end
+    if not claimUi.visible then
+        return false
+    end
+    if not claimUi.buttonVisible or not claimUi.buttonActive then
+        return false
+    end
+    if claimUi.unclaimedVisible then
+        return false
+    end
+    if isClaimStrokeDark(claimUi.strokeColor) then
+        return false
+    end
+    return true
+end
+
 local function teleportToMilestoneNpcIfNeeded()
     if not config.rewards.LevelMilestonesTeleportToNpc then
         return nil, false
@@ -456,26 +482,42 @@ local function claimLevelMilestones()
         unknown = 0,
     }
     local availableLevels = {}
+    local pendingLevels = {}
     local claimedLevels = {}
     local lockedLevels = {}
     local unknownLevels = {}
 
     for _, card in ipairs(snapshot.cards) do
-        local state = card.state or "unknown"
-        if counts[state] ~= nil then
-            counts[state] = counts[state] + 1
-        end
-
-        if state == "available" then
-            table.insert(availableLevels, card.level)
-        elseif state == "claimed" then
-            table.insert(claimedLevels, card.level)
-        elseif state == "locked" then
-            table.insert(lockedLevels, card.level)
-        else
+        if not card.hasCheckMarkNode then
             table.insert(unknownLevels, card.level)
+        elseif card.checkVisible then
+            table.insert(claimedLevels, card.level)
+        else
+            table.insert(pendingLevels, card.level)
         end
     end
+
+    table.sort(pendingLevels)
+    for _, level in ipairs(pendingLevels) do
+        if not LevelMilestonesReader.selectLevel(level) then
+            table.insert(unknownLevels, level)
+            continue
+        end
+
+        local claimUi = LevelMilestonesReader.readClaimUi()
+        if isMilestoneClaimUiAvailable(claimUi) then
+            table.insert(availableLevels, level)
+        elseif claimUi then
+            table.insert(lockedLevels, level)
+        else
+            table.insert(unknownLevels, level)
+        end
+    end
+
+    counts.available = #availableLevels
+    counts.claimed = #claimedLevels
+    counts.locked = #lockedLevels
+    counts.unknown = #unknownLevels
 
     Logger.log(string.format(
         "LevelMilestones snapshot available=%d claimed=%d locked=%d unknown=%d",
@@ -521,8 +563,8 @@ local function claimLevelMilestones()
             continue
         end
 
-        if card.state ~= "available" then
-            Logger.log("Skipping level " .. level .. " (state=" .. tostring(card.state) .. ")")
+        if card.checkVisible then
+            Logger.log("Skipping level " .. level .. " (state=claimed)")
             continue
         end
 
@@ -531,14 +573,20 @@ local function claimLevelMilestones()
         end
 
         local claimUi = LevelMilestonesReader.readClaimUi()
+        local claimUiAvailable = isMilestoneClaimUiAvailable(claimUi)
         if claimUi then
             Logger.log(string.format(
-                "LevelMilestones claim UI level=%d buttonVisible=%s buttonActive=%s unclaimedOverlay=%s",
+                "LevelMilestones claim UI level=%d buttonVisible=%s buttonActive=%s unclaimedOverlay=%s available=%s",
                 level,
                 tostring(claimUi.buttonVisible),
                 tostring(claimUi.buttonActive),
-                tostring(claimUi.unclaimedVisible)
+                tostring(claimUi.unclaimedVisible),
+                tostring(claimUiAvailable)
             ))
+        end
+        if not claimUiAvailable then
+            Logger.log("Skipping level " .. level .. " (claim UI not available)")
+            continue
         end
 
         waitRandom(EVENT_MIN_DELAY, EVENT_MAX_DELAY)
@@ -550,7 +598,7 @@ local function claimLevelMilestones()
 
         local afterSnapshot = LevelMilestonesReader.read()
         local afterCard = findMilestoneCardByLevel(afterSnapshot.cards, level)
-        if afterCard and afterCard.state == "claimed" then
+        if afterCard and afterCard.checkVisible then
             Logger.log("Level milestone claimed " .. level)
         else
             Logger.log("No claimed confirmation for level " .. level .. " after attempt")
