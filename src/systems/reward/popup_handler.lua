@@ -49,6 +49,16 @@ local function closeRewardPopup()
 end
 
 local function closeLevelFramePopup()
+    local function isLevelFrameOpen()
+        local levelFrameNow = playerGui:FindFirstChild("LevelFrame")
+        if not levelFrameNow or not levelFrameNow:IsA("ScreenGui") or not levelFrameNow.Enabled then
+            return false
+        end
+
+        local holderNow = levelFrameNow:FindFirstChild("Holder")
+        return holderNow and holderNow:IsA("GuiObject") and holderNow.Visible
+    end
+
     local levelFrame = playerGui:FindFirstChild("LevelFrame")
     if not levelFrame or not levelFrame:IsA("ScreenGui") or not levelFrame.Enabled then
         return false
@@ -60,21 +70,18 @@ local function closeLevelFramePopup()
     end
 
     Logger.log("LevelFrame popup detected")
-    local background = levelFrame:FindFirstChild("Background")
-    if background and background:IsA("GuiObject") then
-        local pos = background.AbsolutePosition
-        local size = background.AbsoluteSize
-        local x = math.floor(pos.X + (size.X * 0.5))
-        local y = math.floor(pos.Y + (size.Y * 0.5))
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1)
-        task.wait()
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
-    else
+    for _ = 1, 3 do
+        -- Same approach used by RewardsScreen: click anywhere.
         PopupHandler.tapAnywhere()
+        task.wait(0.08)
+        if not isLevelFrameOpen() then
+            Logger.log("LevelFrame popup closed")
+            return true
+        end
     end
-    task.wait(0.05)
-    Logger.log("LevelFrame popup closed")
-    return true
+
+    Logger.log("LevelFrame popup still open")
+    return false
 end
 
 function PopupHandler.handle(timeoutSeconds, pollIntervalSeconds)
