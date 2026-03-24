@@ -152,6 +152,14 @@ local function findCardByDay(cards, dayIndex)
     return nil
 end
 
+local function formatColor(color)
+    if not color then
+        return "n/a"
+    end
+
+    return string.format("(%.3f, %.3f, %.3f)", color.R, color.G, color.B)
+end
+
 local function getSortedCardsWithDay(cards)
     local withDay = {}
     for _, card in ipairs(cards) do
@@ -226,6 +234,16 @@ local function claimRewards(remote, guiName, sidebarButtonName)
             Logger.log("Next day card not found in UI, stopping at day " .. nextDay)
             break
         end
+
+        Logger.log(string.format(
+            "%s target day=%d state=%s color=%s source=%s section=%s",
+            guiName,
+            nextDay,
+            tostring(targetCard.state),
+            formatColor(targetCard.stateColor),
+            tostring(targetCard.stateColorSource or "n/a"),
+            tostring(targetCard.section or "n/a")
+        ))
 
         if targetCard.state == "claimed" then
             Logger.log("Next day already marked claimed, stopping at day " .. nextDay)

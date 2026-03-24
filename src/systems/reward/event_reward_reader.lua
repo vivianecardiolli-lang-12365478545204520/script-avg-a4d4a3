@@ -212,42 +212,43 @@ end
 local function getCardStateColor(card)
     local main = card:FindFirstChild("Main")
     if not main then
-        return nil
+        return nil, "none"
     end
 
     local stroke = main:FindFirstChild("UIStroke")
     if stroke and stroke:IsA("UIStroke") then
-        return stroke.Color
+        return stroke.Color, "Main.UIStroke.Color"
     end
 
     local day = main:FindFirstChild("Day")
     if day and day:IsA("GuiObject") then
-        return day.BackgroundColor3
+        return day.BackgroundColor3, "Main.Day.BackgroundColor3"
     end
 
     if main:IsA("GuiObject") then
-        return main.BackgroundColor3
+        return main.BackgroundColor3, "Main.BackgroundColor3"
     end
 
-    return nil
+    return nil, "none"
 end
 
 local function resolveCardState(card)
     local claimedFrame = card:FindFirstChild("ClaimedFrame")
     if claimedFrame and claimedFrame:IsA("GuiObject") and claimedFrame.Visible then
-        return "claimed"
+        local color, source = getCardStateColor(card)
+        return "claimed", color, source
     end
 
-    local color = getCardStateColor(card)
+    local color, source = getCardStateColor(card)
     if color and isOrangeRed(color) then
-        return "available"
+        return "available", color, source
     end
 
     if color and isGray(color) then
-        return "locked"
+        return "locked", color, source
     end
 
-    return "unknown"
+    return "unknown", color, source
 end
 
 local function collectCardsFromSection(holder, sectionName, cards)
@@ -260,9 +261,12 @@ local function collectCardsFromSection(holder, sectionName, cards)
         if child:IsA("Frame") and (child.Name == "SmallTemplate" or child.Name == "BigTemplate") then
             local card = child:FindFirstChild(child.Name)
             if card and card:IsA("Frame") then
+                local state, color, colorSource = resolveCardState(card)
                 table.insert(cards, {
                     dayIndex = parseDay(card),
-                    state = resolveCardState(card),
+                    state = state,
+                    stateColor = color,
+                    stateColorSource = colorSource,
                     cardType = child.Name,
                     section = sectionName,
                 })
