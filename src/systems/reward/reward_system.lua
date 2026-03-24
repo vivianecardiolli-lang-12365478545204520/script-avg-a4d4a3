@@ -488,9 +488,7 @@ local function claimLevelMilestones()
     local unknownLevels = {}
 
     for _, card in ipairs(snapshot.cards) do
-        if not card.hasCheckMarkNode then
-            table.insert(unknownLevels, card.level)
-        elseif card.checkVisible then
+        if card.checkVisible then
             table.insert(claimedLevels, card.level)
         else
             table.insert(pendingLevels, card.level)
