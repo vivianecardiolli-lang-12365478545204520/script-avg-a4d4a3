@@ -133,84 +133,56 @@ local function getDailyClaimPlan(typeName)
     }
 end
 
-local function getEventClaimPlan(guiName, sidebarButtonName)
-    if not EventRewardReader.ensureMenuOpen(guiName, sidebarButtonName) then
-        return {
-            days = {},
-            summary = guiName .. " UI not found",
-        }
-    end
-
-    local snapshot = EventRewardReader.read(guiName)
-    if not snapshot.listFound then
-        return {
-            days = {},
-            summary = guiName .. " UI not found",
-        }
-    end
-
-    local counts = {
-        available = 0,
-        claimed = 0,
-        unknown = 0,
-    }
-
-    local availableDays = {}
-    local claimedDays = {}
-    local unknownDays = {}
-    for _, card in ipairs(snapshot.cards) do
-        local state = card.state or "unknown"
-        if counts[state] ~= nil then
-            counts[state] = counts[state] + 1
-        end
-
-        if state == "available" and card.dayIndex then
-            table.insert(availableDays, card.dayIndex)
-        elseif state == "claimed" and card.dayIndex then
-            table.insert(claimedDays, card.dayIndex)
-        elseif state == "unknown" and card.dayIndex then
-            table.insert(unknownDays, card.dayIndex)
+local function countClaimedCards(cards)
+    local claimed = 0
+    for _, card in ipairs(cards) do
+        if card.state == "claimed" then
+            claimed = claimed + 1
         end
     end
+    return claimed
+end
 
-    table.sort(availableDays)
-
-    local dedupedDays = {}
-    local seen = {}
-    for _, dayIndex in ipairs(availableDays) do
-        if not seen[dayIndex] then
-            seen[dayIndex] = true
-            table.insert(dedupedDays, dayIndex)
+local function findCardByDay(cards, dayIndex)
+    for _, card in ipairs(cards) do
+        if card.dayIndex == dayIndex then
+            return card
         end
     end
-
-    return {
-        days = dedupedDays,
-        summary = string.format(
-            "%s snapshot available=%d claimed=%d unknown=%d",
-            guiName,
-            counts.available,
-            counts.claimed,
-            counts.unknown
-        ),
-        details = string.format(
-            "%s days available=[%s] claimed=[%s] unknown=[%s]",
-            guiName,
-            formatDays(availableDays),
-            formatDays(claimedDays),
-            formatDays(unknownDays)
-        ),
-    }
+    return nil
 end
 
 local function claimRewards(remote, guiName, sidebarButtonName)
     Logger.log("Starting " .. remote.Name)
 
-    local claimPlan = getEventClaimPlan(guiName, sidebarButtonName)
-    Logger.log(claimPlan.summary)
-    Logger.log(claimPlan.details)
+    if not EventRewardReader.ensureMenuOpen(guiName, sidebarButtonName) then
+        Logger.log(guiName .. " UI not found")
+        Logger.log("Finished " .. remote.Name)
+        return
+    end
 
-    if #claimPlan.days == 0 then
+    local snapshot = EventRewardReader.read(guiName)
+    if not snapshot.listFound then
+        Logger.log(guiName .. " UI not found")
+        Logger.log("Finished " .. remote.Name)
+        return
+    end
+
+    local claimedCount = snapshot.claimedCount
+    if claimedCount == nil then
+        claimedCount = countClaimedCards(snapshot.cards)
+    end
+
+    local totalDays = snapshot.totalDays or 7
+    Logger.log(string.format(
+        "%s progress claimed=%d/%d timer=%s",
+        guiName,
+        claimedCount,
+        totalDays,
+        snapshot.timerText or "n/a"
+    ))
+
+    if claimedCount >= totalDays then
         Logger.log("No available rewards for " .. remote.Name)
         if not EventRewardReader.closeMenu(guiName) then
             Logger.log("Failed to close " .. guiName .. " menu after empty plan")
@@ -219,16 +191,65 @@ local function claimRewards(remote, guiName, sidebarButtonName)
         return
     end
 
-    shuffleArray(claimPlan.days)
+    local maxAttempts = 3
+    for i = 1, maxAttempts do
+        local nextDay = claimedCount + 1
+        if nextDay > totalDays then
+            break
+        end
 
-    for i, dayIndex in ipairs(claimPlan.days) do
+        local targetCard = findCardByDay(snapshot.cards, nextDay)
+        if not targetCard then
+            Logger.log("Next day card not found in UI, stopping at day " .. nextDay)
+            break
+        end
+
+        if targetCard.state == "claimed" then
+            Logger.log("Next day already marked claimed, stopping at day " .. nextDay)
+            break
+        end
+
+        if targetCard.state ~= "available" then
+            Logger.log(
+                "Next day is not available (" .. tostring(targetCard.state) .. "), stopping at day " .. nextDay
+            )
+            break
+        end
+
         waitRandom(EVENT_MIN_DELAY, EVENT_MAX_DELAY)
-        Logger.log("Claim attempt " .. dayIndex)
+        Logger.log("Claim attempt " .. nextDay)
 
-        remote:FireServer("Claim", dayIndex)
+        remote:FireServer("Claim", nextDay)
 
         waitRandom(EVENT_POST_CLAIM_MIN_DELAY, EVENT_POST_CLAIM_MAX_DELAY)
         PopupHandler.handle(3)
+
+        snapshot = EventRewardReader.read(guiName)
+        if not snapshot.listFound then
+            Logger.log(guiName .. " UI disappeared while claiming")
+            break
+        end
+
+        local newClaimedCount = snapshot.claimedCount
+        if newClaimedCount == nil then
+            newClaimedCount = countClaimedCards(snapshot.cards)
+        end
+
+        Logger.log(string.format(
+            "%s progress after attempt %d -> %d/%d",
+            guiName,
+            claimedCount,
+            newClaimedCount,
+            totalDays
+        ))
+
+        if newClaimedCount <= claimedCount then
+            Logger.log("No progress after claim attempt, stopping " .. remote.Name)
+            break
+        end
+
+        claimedCount = newClaimedCount
+        totalDays = snapshot.totalDays or totalDays
 
         if i % rng:NextInteger(3, 5) == 0 then
             waitRandom(1.0, 1.8)

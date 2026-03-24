@@ -158,15 +158,93 @@ local function parseDay(card)
     return tonumber((content or ""):match("(%d+)"))
 end
 
+local function parseClaimedProgress(holder)
+    local eventInfo = holder:FindFirstChild("EventInfo")
+    local display = eventInfo and eventInfo:FindFirstChild("Display")
+    local claimInfo = display and display:FindFirstChild("ClaimInfo")
+    local claimedDays = claimInfo and claimInfo:FindFirstChild("ClaimedDays")
+    local claimedLabel = claimedDays and claimedDays:FindFirstChild("Claimed")
+    if not claimedLabel or not claimedLabel:IsA("TextLabel") then
+        return nil, nil
+    end
+
+    local content = claimedLabel.ContentText
+    if not content or content == "" then
+        content = claimedLabel.Text
+    end
+
+    local claimed, total = tostring(content or ""):match("(%d+)%s*/%s*(%d+)")
+    return tonumber(claimed), tonumber(total)
+end
+
+local function parseTimerText(holder)
+    local eventInfo = holder:FindFirstChild("EventInfo")
+    local display = eventInfo and eventInfo:FindFirstChild("Display")
+    local claimInfo = display and display:FindFirstChild("ClaimInfo")
+    local timer = claimInfo and claimInfo:FindFirstChild("Timer")
+    if not timer or not timer:IsA("TextLabel") then
+        return nil
+    end
+
+    local content = timer.ContentText
+    if not content or content == "" then
+        content = timer.Text
+    end
+
+    local text = tostring(content or "")
+    if text == "" then
+        return nil
+    end
+
+    return text
+end
+
+local function isGray(color)
+    local drg = math.abs(color.R - color.G)
+    local dgb = math.abs(color.G - color.B)
+    return drg < 0.04 and dgb < 0.04
+end
+
+local function isOrangeRed(color)
+    return color.R > 0.75 and color.G > 0.10 and color.G < 0.45 and color.B < 0.20
+end
+
+local function getCardStateColor(card)
+    local main = card:FindFirstChild("Main")
+    if not main then
+        return nil
+    end
+
+    local stroke = main:FindFirstChild("UIStroke")
+    if stroke and stroke:IsA("UIStroke") then
+        return stroke.Color
+    end
+
+    local day = main:FindFirstChild("Day")
+    if day and day:IsA("GuiObject") then
+        return day.BackgroundColor3
+    end
+
+    if main:IsA("GuiObject") then
+        return main.BackgroundColor3
+    end
+
+    return nil
+end
+
 local function resolveCardState(card)
     local claimedFrame = card:FindFirstChild("ClaimedFrame")
     if claimedFrame and claimedFrame:IsA("GuiObject") and claimedFrame.Visible then
         return "claimed"
     end
 
-    local button = card:FindFirstChild("Button")
-    if button and button:IsA("GuiButton") and button.Visible and button.Active then
+    local color = getCardStateColor(card)
+    if color and isOrangeRed(color) then
         return "available"
+    end
+
+    if color and isGray(color) then
+        return "locked"
     end
 
     return "unknown"
@@ -206,9 +284,20 @@ function EventRewardReader.read(guiName)
     collectCardsFromSection(holder, "TopRewards", cards)
     collectCardsFromSection(holder, "BottomRewards", cards)
 
+    local claimedCount, totalDays = parseClaimedProgress(holder)
+    local timerText = parseTimerText(holder)
+    local hasNextClaim = false
+    if timerText then
+        hasNextClaim = string.find(string.lower(timerText), "next claim", 1, true) ~= nil
+    end
+
     return {
         listFound = true,
         cards = cards,
+        claimedCount = claimedCount,
+        totalDays = totalDays,
+        timerText = timerText,
+        hasNextClaim = hasNextClaim,
     }
 end
 
