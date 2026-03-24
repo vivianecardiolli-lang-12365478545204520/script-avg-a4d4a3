@@ -199,56 +199,54 @@ local function parseTimerText(holder)
     return text
 end
 
-local function isGray(color)
-    local drg = math.abs(color.R - color.G)
-    local dgb = math.abs(color.G - color.B)
-    return drg < 0.04 and dgb < 0.04
-end
-
-local function isOrangeRed(color)
-    return color.R > 0.75 and color.G > 0.10 and color.G < 0.45 and color.B < 0.20
-end
-
-local function getCardStateColor(card)
+local function getTopGradientInfo(card)
     local main = card:FindFirstChild("Main")
     if not main then
-        return nil, "none"
-    end
-
-    local stroke = main:FindFirstChild("UIStroke")
-    if stroke and stroke:IsA("UIStroke") then
-        return stroke.Color, "Main.UIStroke.Color"
+        return nil, "none", false
     end
 
     local day = main:FindFirstChild("Day")
-    if day and day:IsA("GuiObject") then
-        return day.BackgroundColor3, "Main.Day.BackgroundColor3"
+    local dayTitle = main:FindFirstChild("DayTitle")
+    local stroke = main:FindFirstChild("UIStroke")
+
+    local targets = {
+        { source = "Main.Day", instance = day },
+        { source = "Main.DayTitle", instance = dayTitle },
+        { source = "Main.UIStroke", instance = stroke },
+    }
+
+    for _, target in ipairs(targets) do
+        local instance = target.instance
+        if instance then
+            for _, child in ipairs(instance:GetChildren()) do
+                if child:IsA("UIGradient") and child.Enabled then
+                    local keypoints = child.Color and child.Color.Keypoints or nil
+                    local color = nil
+                    if keypoints and #keypoints > 0 then
+                        color = keypoints[1].Value
+                    end
+                    return color, target.source .. ".UIGradient", true
+                end
+            end
+        end
     end
 
-    if main:IsA("GuiObject") then
-        return main.BackgroundColor3, "Main.BackgroundColor3"
-    end
-
-    return nil, "none"
+    return nil, "none", false
 end
 
 local function resolveCardState(card)
+    local color, source, hasTopGradient = getTopGradientInfo(card)
+
     local claimedFrame = card:FindFirstChild("ClaimedFrame")
     if claimedFrame and claimedFrame:IsA("GuiObject") and claimedFrame.Visible then
-        local color, source = getCardStateColor(card)
         return "claimed", color, source
     end
 
-    local color, source = getCardStateColor(card)
-    if color and isOrangeRed(color) then
+    if hasTopGradient then
         return "available", color, source
     end
 
-    if color and isGray(color) then
-        return "locked", color, source
-    end
-
-    return "unknown", color, source
+    return "locked", color, source
 end
 
 local function collectCardsFromSection(holder, sectionName, cards)
