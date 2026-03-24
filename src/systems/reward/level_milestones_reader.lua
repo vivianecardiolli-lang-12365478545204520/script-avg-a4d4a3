@@ -50,6 +50,24 @@ local function clickAt(x, y)
     VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
 end
 
+local function clickGuiCenter(guiObject)
+    if not guiObject or not guiObject:IsA("GuiObject") then
+        return false
+    end
+
+    local pos = guiObject.AbsolutePosition
+    local size = guiObject.AbsoluteSize
+    if size.X <= 0 or size.Y <= 0 then
+        return false
+    end
+
+    local x = math.floor(pos.X + (size.X * 0.5))
+    local y = math.floor(pos.Y + (size.Y * 0.5))
+    clickAt(x, y)
+    task.wait(0.2)
+    return true
+end
+
 local function clickCloseFallback(main)
     if not main or not main:IsA("GuiObject") then
         return false
@@ -93,6 +111,11 @@ local function findFirstButton(root)
 end
 
 local function isMainVisible()
+    local gui = getGui()
+    if gui and gui:IsA("ScreenGui") and gui.Enabled == false then
+        return false
+    end
+
     local main = getMain()
     if not main or not main:IsA("GuiObject") then
         return false
@@ -121,16 +144,27 @@ function LevelMilestonesReader.closeMenu()
 
     local cancel = main:FindFirstChild("Cancel")
     local cancelButton = findFirstButton(cancel)
-    if cancelButton and fireButton(cancelButton) then
-        task.wait(0.2)
-        if not isMainVisible() then
+    if cancelButton then
+        for _ = 1, 2 do
+            fireButton(cancelButton)
+            task.wait(0.2)
+            if not isMainVisible() then
+                return true
+            end
+        end
+
+        if clickGuiCenter(cancelButton) and not isMainVisible() then
             return true
         end
     end
 
     main = getMain()
-    if clickCloseFallback(main) then
-        return not isMainVisible()
+    for _ = 1, 2 do
+        if clickCloseFallback(main) and not isMainVisible() then
+            return true
+        end
+        task.wait(0.15)
+        main = getMain()
     end
 
     return false

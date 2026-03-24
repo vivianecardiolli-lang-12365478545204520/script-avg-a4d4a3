@@ -19,6 +19,11 @@ config.rewards = {
     EnableSpecialRewards = pick(rewardOverrides.EnableSpecialRewards, true),
     EnableWinterRewards = pick(rewardOverrides.EnableWinterRewards, true),
     EnableLevelMilestones = pick(rewardOverrides.EnableLevelMilestones, true),
+    LevelMilestonesTeleportToNpc = pick(rewardOverrides.LevelMilestonesTeleportToNpc, true),
+    LevelMilestonesReturnToOriginalPosition = pick(rewardOverrides.LevelMilestonesReturnToOriginalPosition, true),
+    LevelMilestonesNpcName = pick(rewardOverrides.LevelMilestonesNpcName, "Gilgamesh"),
+    LevelMilestonesTeleportRadius = pick(rewardOverrides.LevelMilestonesTeleportRadius, 3),
+    LevelMilestonesTeleportYOffset = pick(rewardOverrides.LevelMilestonesTeleportYOffset, 3),
 }
 
 local trackerOverrides = runtimeConfig.tracker or {}

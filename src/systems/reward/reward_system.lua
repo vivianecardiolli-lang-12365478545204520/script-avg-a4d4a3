@@ -1,4 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
 local config = require("core.config")
 local Logger = require("core.logger")
@@ -211,6 +213,75 @@ local function findMilestoneCardByLevel(cards, level)
     return nil
 end
 
+local function getHumanoidRootPart()
+    local player = Players.LocalPlayer
+    local character = player and player.Character
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function teleportToMilestoneNpcIfNeeded()
+    if not config.rewards.LevelMilestonesTeleportToNpc then
+        return nil, false
+    end
+
+    local root = getHumanoidRootPart()
+    if not root then
+        Logger.log("LevelMilestones teleport skipped: HumanoidRootPart not found")
+        return nil, false
+    end
+
+    local mainLobby = Workspace:FindFirstChild("MainLobby")
+    local npcFolder = mainLobby and mainLobby:FindFirstChild("NPC")
+    local npcName = config.rewards.LevelMilestonesNpcName or "Gilgamesh"
+    local npc = npcFolder and npcFolder:FindFirstChild(npcName)
+    if not npc then
+        Logger.log("LevelMilestones teleport skipped: NPC not found (" .. tostring(npcName) .. ")")
+        return nil, false
+    end
+
+    local originalCFrame = root.CFrame
+    local npcCFrame = npc:IsA("Model") and npc:GetPivot() or npc.CFrame
+
+    local radius = tonumber(config.rewards.LevelMilestonesTeleportRadius) or 3
+    if radius < 0 then
+        radius = 0
+    end
+
+    local offsetX = rng:NextNumber(-radius, radius)
+    local offsetZ = rng:NextNumber(-radius, radius)
+    local offsetY = tonumber(config.rewards.LevelMilestonesTeleportYOffset) or 3
+
+    root.CFrame = npcCFrame * CFrame.new(offsetX, offsetY, offsetZ)
+    Logger.log(string.format(
+        "LevelMilestones teleported near %s (offset=%.2f,%.2f,%.2f)",
+        tostring(npcName),
+        offsetX,
+        offsetY,
+        offsetZ
+    ))
+
+    waitRandom(1.2, 2.8)
+    return originalCFrame, true
+end
+
+local function restoreOriginalPosition(originalCFrame)
+    if not originalCFrame then
+        return
+    end
+    if not config.rewards.LevelMilestonesReturnToOriginalPosition then
+        return
+    end
+
+    local root = getHumanoidRootPart()
+    if not root then
+        Logger.log("LevelMilestones return skipped: HumanoidRootPart not found")
+        return
+    end
+
+    root.CFrame = originalCFrame
+    Logger.log("LevelMilestones returned to original position")
+end
+
 local function claimRewards(remote, guiName, sidebarButtonName)
     Logger.log("Starting " .. remote.Name)
 
@@ -371,12 +442,6 @@ end
 local function claimLevelMilestones()
     Logger.log("Starting LevelMilestones")
 
-    if not LevelMilestonesReader.ensureMenuOpen() then
-        Logger.log("LevelMilestones UI not found")
-        Logger.log("Finished LevelMilestones")
-        return
-    end
-
     local snapshot = LevelMilestonesReader.read()
     if not snapshot.listFound then
         Logger.log("LevelMilestones UI not found")
@@ -429,14 +494,19 @@ local function claimLevelMilestones()
 
     if #availableLevels == 0 then
         Logger.log("No available level milestones")
-        if not LevelMilestonesReader.closeMenu() then
-            Logger.log("Failed to close LevelMilestones menu after empty plan")
-        end
         Logger.log("Finished LevelMilestones")
         return
     end
 
     shuffleArray(availableLevels)
+    local originalCFrame = nil
+    local teleported = false
+    originalCFrame, teleported = teleportToMilestoneNpcIfNeeded()
+    if not teleported then
+        Logger.log("LevelMilestones skipped: teleport to NPC failed")
+        Logger.log("Finished LevelMilestones")
+        return
+    end
 
     for i, level in ipairs(availableLevels) do
         snapshot = LevelMilestonesReader.read()
@@ -457,8 +527,7 @@ local function claimLevelMilestones()
         end
 
         if not LevelMilestonesReader.selectLevel(level) then
-            Logger.log("Failed to select level milestone " .. level)
-            continue
+            Logger.log("Level milestone card selection not available for level " .. level .. " (continuing with remote)")
         end
 
         local claimUi = LevelMilestonesReader.readClaimUi()
@@ -492,8 +561,8 @@ local function claimLevelMilestones()
         end
     end
 
-    if not LevelMilestonesReader.closeMenu() then
-        Logger.log("Failed to close LevelMilestones menu after claims")
+    if teleported then
+        restoreOriginalPosition(originalCFrame)
     end
 
     Logger.log("Finished LevelMilestones")
