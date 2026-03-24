@@ -152,6 +152,31 @@ local function findCardByDay(cards, dayIndex)
     return nil
 end
 
+local function getSortedCardsWithDay(cards)
+    local withDay = {}
+    for _, card in ipairs(cards) do
+        if card.dayIndex ~= nil then
+            table.insert(withDay, card)
+        end
+    end
+
+    table.sort(withDay, function(a, b)
+        return a.dayIndex < b.dayIndex
+    end)
+
+    return withDay
+end
+
+local function getNextUnclaimedDay(cards)
+    local sorted = getSortedCardsWithDay(cards)
+    for _, card in ipairs(sorted) do
+        if card.state ~= "claimed" then
+            return card.dayIndex
+        end
+    end
+    return nil
+end
+
 local function claimRewards(remote, guiName, sidebarButtonName)
     Logger.log("Starting " .. remote.Name)
 
@@ -168,21 +193,19 @@ local function claimRewards(remote, guiName, sidebarButtonName)
         return
     end
 
-    local claimedCount = snapshot.claimedCount
-    if claimedCount == nil then
-        claimedCount = countClaimedCards(snapshot.cards)
-    end
-
+    local claimedProgress = snapshot.claimedCount
     local totalDays = snapshot.totalDays or 7
+    local claimedCards = countClaimedCards(snapshot.cards)
     Logger.log(string.format(
-        "%s progress claimed=%d/%d timer=%s",
+        "%s progress text=%s/%d cardsClaimed=%d timer=%s",
         guiName,
-        claimedCount,
+        tostring(claimedProgress or "n/a"),
         totalDays,
+        claimedCards,
         snapshot.timerText or "n/a"
     ))
 
-    if claimedCount >= totalDays then
+    if claimedCards >= totalDays then
         Logger.log("No available rewards for " .. remote.Name)
         if not EventRewardReader.closeMenu(guiName) then
             Logger.log("Failed to close " .. guiName .. " menu after empty plan")
@@ -193,8 +216,8 @@ local function claimRewards(remote, guiName, sidebarButtonName)
 
     local maxAttempts = 3
     for i = 1, maxAttempts do
-        local nextDay = claimedCount + 1
-        if nextDay > totalDays then
+        local nextDay = getNextUnclaimedDay(snapshot.cards)
+        if nextDay == nil or nextDay > totalDays then
             break
         end
 
@@ -209,9 +232,9 @@ local function claimRewards(remote, guiName, sidebarButtonName)
             break
         end
 
-        if targetCard.state ~= "available" then
+        if targetCard.state == "locked" then
             Logger.log(
-                "Next day is not available (" .. tostring(targetCard.state) .. "), stopping at day " .. nextDay
+                "Next day is locked, stopping at day " .. nextDay
             )
             break
         end
@@ -230,25 +253,24 @@ local function claimRewards(remote, guiName, sidebarButtonName)
             break
         end
 
-        local newClaimedCount = snapshot.claimedCount
-        if newClaimedCount == nil then
-            newClaimedCount = countClaimedCards(snapshot.cards)
-        end
+        local newClaimedCards = countClaimedCards(snapshot.cards)
+        local newClaimedProgress = snapshot.claimedCount
 
         Logger.log(string.format(
-            "%s progress after attempt %d -> %d/%d",
+            "%s progress after attempt cards=%d->%d text=%s/%d",
             guiName,
-            claimedCount,
-            newClaimedCount,
+            claimedCards,
+            newClaimedCards,
+            tostring(newClaimedProgress or "n/a"),
             totalDays
         ))
 
-        if newClaimedCount <= claimedCount then
+        if newClaimedCards <= claimedCards then
             Logger.log("No progress after claim attempt, stopping " .. remote.Name)
             break
         end
 
-        claimedCount = newClaimedCount
+        claimedCards = newClaimedCards
         totalDays = snapshot.totalDays or totalDays
 
         if i % rng:NextInteger(3, 5) == 0 then
