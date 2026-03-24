@@ -468,11 +468,38 @@ end
 local function claimLevelMilestones()
     Logger.log("Starting LevelMilestones")
 
+    local originalCFrame = nil
+    local teleported = false
+
     local snapshot = LevelMilestonesReader.read()
     if not snapshot.listFound then
         Logger.log("LevelMilestones UI not found")
         Logger.log("Finished LevelMilestones")
         return
+    end
+    if #snapshot.cards == 0 then
+        Logger.log("LevelMilestones snapshot returned 0 cards; retrying after hydration delay")
+        for _ = 1, 4 do
+            task.wait(0.35)
+            snapshot = LevelMilestonesReader.read()
+            if snapshot.listFound and #snapshot.cards > 0 then
+                break
+            end
+        end
+    end
+
+    if #snapshot.cards == 0 then
+        originalCFrame, teleported = teleportToMilestoneNpcIfNeeded()
+        if teleported then
+            Logger.log("LevelMilestones retrying snapshot after teleport hydration")
+            for _ = 1, 5 do
+                task.wait(0.35)
+                snapshot = LevelMilestonesReader.read()
+                if snapshot.listFound and #snapshot.cards > 0 then
+                    break
+                end
+            end
+        end
     end
 
     local counts = {
@@ -518,7 +545,8 @@ local function claimLevelMilestones()
     counts.unknown = #unknownLevels
 
     Logger.log(string.format(
-        "LevelMilestones snapshot available=%d claimed=%d locked=%d unknown=%d",
+        "LevelMilestones snapshot cards=%d available=%d claimed=%d locked=%d unknown=%d",
+        #snapshot.cards,
         counts.available,
         counts.claimed,
         counts.locked,
@@ -533,15 +561,21 @@ local function claimLevelMilestones()
     ))
 
     if #availableLevels == 0 then
+        if #snapshot.cards == 0 then
+            Logger.log("No milestone cards detected in UI snapshot")
+        end
         Logger.log("No available level milestones")
+        if teleported then
+            restoreOriginalPosition(originalCFrame)
+        end
         Logger.log("Finished LevelMilestones")
         return
     end
 
     shuffleArray(availableLevels)
-    local originalCFrame = nil
-    local teleported = false
-    originalCFrame, teleported = teleportToMilestoneNpcIfNeeded()
+    if not teleported then
+        originalCFrame, teleported = teleportToMilestoneNpcIfNeeded()
+    end
     if not teleported then
         Logger.log("LevelMilestones skipped: teleport to NPC failed")
         Logger.log("Finished LevelMilestones")
