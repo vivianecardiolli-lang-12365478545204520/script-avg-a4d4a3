@@ -4,6 +4,7 @@ local config = require("core.config")
 local Logger = require("core.logger")
 local DailyStateReader = require("systems.reward.daily_state_reader")
 local EventRewardReader = require("systems.reward.event_reward_reader")
+local LevelMilestonesReader = require("systems.reward.level_milestones_reader")
 local PopupHandler = require("systems.reward.popup_handler")
 
 local RewardSystem = {}
@@ -13,6 +14,7 @@ local networking = ReplicatedStorage:WaitForChild("Networking")
 local newPlayerRemote = networking:WaitForChild("NewPlayerRewardsEvent")
 local pirateRemote = networking:WaitForChild("APiratesWelcomeEvent")
 local dailyRemote = networking:WaitForChild("DailyRewardEvent")
+local milestonesRemote = networking:WaitForChild("Milestones"):WaitForChild("MilestonesEvent")
 local rng = Random.new()
 
 local DAILY_MIN_DELAY = 0.35
@@ -40,6 +42,21 @@ local function formatDays(days)
     local parts = {}
     for _, day in ipairs(days) do
         table.insert(parts, tostring(day))
+    end
+
+    return table.concat(parts, ",")
+end
+
+local function formatLevels(levels)
+    if #levels == 0 then
+        return "none"
+    end
+
+    table.sort(levels)
+
+    local parts = {}
+    for _, level in ipairs(levels) do
+        table.insert(parts, tostring(level))
     end
 
     return table.concat(parts, ",")
@@ -180,6 +197,15 @@ local function getNextUnclaimedDay(cards)
     for _, card in ipairs(sorted) do
         if card.state ~= "claimed" then
             return card.dayIndex
+        end
+    end
+    return nil
+end
+
+local function findMilestoneCardByLevel(cards, level)
+    for _, card in ipairs(cards) do
+        if card.level == level then
+            return card
         end
     end
     return nil
@@ -342,6 +368,137 @@ local function claimDaily(typeName)
     Logger.log("Finished DailyReward " .. typeName)
 end
 
+local function claimLevelMilestones()
+    Logger.log("Starting LevelMilestones")
+
+    if not LevelMilestonesReader.ensureMenuOpen() then
+        Logger.log("LevelMilestones UI not found")
+        Logger.log("Finished LevelMilestones")
+        return
+    end
+
+    local snapshot = LevelMilestonesReader.read()
+    if not snapshot.listFound then
+        Logger.log("LevelMilestones UI not found")
+        Logger.log("Finished LevelMilestones")
+        return
+    end
+
+    local counts = {
+        available = 0,
+        claimed = 0,
+        locked = 0,
+        unknown = 0,
+    }
+    local availableLevels = {}
+    local claimedLevels = {}
+    local lockedLevels = {}
+    local unknownLevels = {}
+
+    for _, card in ipairs(snapshot.cards) do
+        local state = card.state or "unknown"
+        if counts[state] ~= nil then
+            counts[state] = counts[state] + 1
+        end
+
+        if state == "available" then
+            table.insert(availableLevels, card.level)
+        elseif state == "claimed" then
+            table.insert(claimedLevels, card.level)
+        elseif state == "locked" then
+            table.insert(lockedLevels, card.level)
+        else
+            table.insert(unknownLevels, card.level)
+        end
+    end
+
+    Logger.log(string.format(
+        "LevelMilestones snapshot available=%d claimed=%d locked=%d unknown=%d",
+        counts.available,
+        counts.claimed,
+        counts.locked,
+        counts.unknown
+    ))
+    Logger.log(string.format(
+        "LevelMilestones levels available=[%s] claimed=[%s] locked=[%s] unknown=[%s]",
+        formatLevels(availableLevels),
+        formatLevels(claimedLevels),
+        formatLevels(lockedLevels),
+        formatLevels(unknownLevels)
+    ))
+
+    if #availableLevels == 0 then
+        Logger.log("No available level milestones")
+        if not LevelMilestonesReader.closeMenu() then
+            Logger.log("Failed to close LevelMilestones menu after empty plan")
+        end
+        Logger.log("Finished LevelMilestones")
+        return
+    end
+
+    shuffleArray(availableLevels)
+
+    for i, level in ipairs(availableLevels) do
+        snapshot = LevelMilestonesReader.read()
+        if not snapshot.listFound then
+            Logger.log("LevelMilestones UI disappeared while claiming")
+            break
+        end
+
+        local card = findMilestoneCardByLevel(snapshot.cards, level)
+        if not card then
+            Logger.log("Level milestone card not found for level " .. level)
+            continue
+        end
+
+        if card.state ~= "available" then
+            Logger.log("Skipping level " .. level .. " (state=" .. tostring(card.state) .. ")")
+            continue
+        end
+
+        if not LevelMilestonesReader.selectLevel(level) then
+            Logger.log("Failed to select level milestone " .. level)
+            continue
+        end
+
+        local claimUi = LevelMilestonesReader.readClaimUi()
+        if claimUi then
+            Logger.log(string.format(
+                "LevelMilestones claim UI level=%d buttonVisible=%s buttonActive=%s unclaimedOverlay=%s",
+                level,
+                tostring(claimUi.buttonVisible),
+                tostring(claimUi.buttonActive),
+                tostring(claimUi.unclaimedVisible)
+            ))
+        end
+
+        waitRandom(EVENT_MIN_DELAY, EVENT_MAX_DELAY)
+        Logger.log("Claim attempt LevelMilestones level " .. level)
+        milestonesRemote:FireServer("Claim", level)
+
+        waitRandom(EVENT_POST_CLAIM_MIN_DELAY, EVENT_POST_CLAIM_MAX_DELAY)
+        PopupHandler.handle(3)
+
+        local afterSnapshot = LevelMilestonesReader.read()
+        local afterCard = findMilestoneCardByLevel(afterSnapshot.cards, level)
+        if afterCard and afterCard.state == "claimed" then
+            Logger.log("Level milestone claimed " .. level)
+        else
+            Logger.log("No claimed confirmation for level " .. level .. " after attempt")
+        end
+
+        if i % rng:NextInteger(3, 5) == 0 then
+            waitRandom(1.0, 1.8)
+        end
+    end
+
+    if not LevelMilestonesReader.closeMenu() then
+        Logger.log("Failed to close LevelMilestones menu after claims")
+    end
+
+    Logger.log("Finished LevelMilestones")
+end
+
 function RewardSystem.run()
     if config.rewards.EnableNewPlayerRewards then
         claimRewards(newPlayerRemote, "NewPlayers", "ReturningPlayerRewards")
@@ -366,8 +523,15 @@ function RewardSystem.run()
 
     if config.rewards.EnableWinterRewards then
         claimDaily("Winter")
+        waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
     else
         Logger.log("Skipping DailyReward Winter (disabled by config)")
+    end
+
+    if config.rewards.EnableLevelMilestones then
+        claimLevelMilestones()
+    else
+        Logger.log("Skipping LevelMilestones (disabled by config)")
     end
 
     Logger.log("RewardSystem finished")

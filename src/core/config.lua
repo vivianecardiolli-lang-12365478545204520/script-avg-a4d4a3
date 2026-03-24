@@ -18,6 +18,7 @@ config.rewards = {
     EnablePirateRewards = pick(rewardOverrides.EnablePirateRewards, true),
     EnableSpecialRewards = pick(rewardOverrides.EnableSpecialRewards, true),
     EnableWinterRewards = pick(rewardOverrides.EnableWinterRewards, true),
+    EnableLevelMilestones = pick(rewardOverrides.EnableLevelMilestones, true),
 }
 
 local trackerOverrides = runtimeConfig.tracker or {}
