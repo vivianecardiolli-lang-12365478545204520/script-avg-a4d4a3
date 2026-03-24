@@ -10,10 +10,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local function clickRewardsScreen()
     Logger.log("Closing RewardsScreen")
-
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 1)
-    task.wait()
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 1)
+    PopupHandler.tapAnywhere()
 end
 
 local function clickCancelPopup()
@@ -51,9 +48,39 @@ local function closeRewardPopup()
     return false
 end
 
-function PopupHandler.handle(timeoutSeconds)
+local function closeLevelFramePopup()
+    local levelFrame = playerGui:FindFirstChild("LevelFrame")
+    if not levelFrame or not levelFrame:IsA("ScreenGui") or not levelFrame.Enabled then
+        return false
+    end
+
+    local holder = levelFrame:FindFirstChild("Holder")
+    if not holder or not holder:IsA("GuiObject") or not holder.Visible then
+        return false
+    end
+
+    Logger.log("LevelFrame popup detected")
+    local background = levelFrame:FindFirstChild("Background")
+    if background and background:IsA("GuiObject") then
+        local pos = background.AbsolutePosition
+        local size = background.AbsoluteSize
+        local x = math.floor(pos.X + (size.X * 0.5))
+        local y = math.floor(pos.Y + (size.Y * 0.5))
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1)
+        task.wait()
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    else
+        PopupHandler.tapAnywhere()
+    end
+    task.wait(0.05)
+    Logger.log("LevelFrame popup closed")
+    return true
+end
+
+function PopupHandler.handle(timeoutSeconds, pollIntervalSeconds)
     local start = tick()
     local timeout = timeoutSeconds or 3
+    local pollInterval = pollIntervalSeconds or 0.2
 
     while tick() - start < timeout do
         if clickCancelPopup() then
@@ -64,11 +91,21 @@ function PopupHandler.handle(timeoutSeconds)
             return true
         end
 
-        task.wait(0.2)
+        if closeLevelFramePopup() then
+            return true
+        end
+
+        task.wait(pollInterval)
     end
 
     Logger.log("No popup detected")
     return false
+end
+
+function PopupHandler.tapAnywhere()
+    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 1)
+    task.wait()
+    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 1)
 end
 
 return PopupHandler

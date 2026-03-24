@@ -29,6 +29,10 @@ local EVENT_POST_CLAIM_MIN_DELAY = 0.35
 local EVENT_POST_CLAIM_MAX_DELAY = 0.75
 local MENU_SWITCH_MIN_DELAY = 0.8
 local MENU_SWITCH_MAX_DELAY = 1.9
+local MILESTONE_MIN_DELAY = 0.10
+local MILESTONE_MAX_DELAY = 0.25
+local MILESTONE_POST_CLAIM_MIN_DELAY = 0.12
+local MILESTONE_POST_CLAIM_MAX_DELAY = 0.25
 
 local function waitRandom(minSeconds, maxSeconds)
     task.wait(rng:NextNumber(minSeconds, maxSeconds))
@@ -386,7 +390,7 @@ local function claimRewards(remote, guiName, sidebarButtonName)
         remote:FireServer("Claim", nextDay)
 
         waitRandom(EVENT_POST_CLAIM_MIN_DELAY, EVENT_POST_CLAIM_MAX_DELAY)
-        PopupHandler.handle(3)
+        PopupHandler.handle(1.0, 0.1)
 
         snapshot = EventRewardReader.read(guiName)
         if not snapshot.listFound then
@@ -451,7 +455,7 @@ local function claimDaily(typeName)
         dailyRemote:FireServer("Claim", { typeName, dayIndex })
 
         waitRandom(DAILY_POST_CLAIM_MIN_DELAY, DAILY_POST_CLAIM_MAX_DELAY)
-        PopupHandler.handle(3)
+        PopupHandler.handle(1.0, 0.1)
 
         if i % rng:NextInteger(3, 5) == 0 then
             waitRandom(1.1, 2.1)
@@ -621,12 +625,15 @@ local function claimLevelMilestones()
             continue
         end
 
-        waitRandom(EVENT_MIN_DELAY, EVENT_MAX_DELAY)
+        waitRandom(MILESTONE_MIN_DELAY, MILESTONE_MAX_DELAY)
         Logger.log("Claim attempt LevelMilestones level " .. level)
         milestonesRemote:FireServer("Claim", level)
 
-        waitRandom(EVENT_POST_CLAIM_MIN_DELAY, EVENT_POST_CLAIM_MAX_DELAY)
-        PopupHandler.handle(3)
+        waitRandom(MILESTONE_POST_CLAIM_MIN_DELAY, MILESTONE_POST_CLAIM_MAX_DELAY)
+        local popupClosed = PopupHandler.handle(1.0, 0.1)
+        if not popupClosed then
+            PopupHandler.tapAnywhere()
+        end
 
         local afterSnapshot = LevelMilestonesReader.read()
         local afterCard = findMilestoneCardByLevel(afterSnapshot.cards, level)
@@ -637,7 +644,7 @@ local function claimLevelMilestones()
         end
 
         if i % rng:NextInteger(3, 5) == 0 then
-            waitRandom(1.0, 1.8)
+            waitRandom(0.35, 0.70)
         end
     end
 

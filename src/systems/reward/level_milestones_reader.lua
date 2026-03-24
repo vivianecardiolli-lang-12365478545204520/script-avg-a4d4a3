@@ -278,19 +278,43 @@ function LevelMilestonesReader.read()
     end
 
     local cards = {}
+    local seenLevels = {}
+
+    local function tryAddCard(frame)
+        if not frame or not frame:IsA("Frame") then
+            return
+        end
+
+        local level = parseCardLevel(frame)
+        if not level or seenLevels[level] then
+            return
+        end
+
+        local hasMain = frame:FindFirstChild("Main") ~= nil
+        local hasButton = frame:FindFirstChild("Button") ~= nil
+        local hasDarkFrame = frame:FindFirstChild("DarkFrame") ~= nil
+        if not (hasMain and (hasButton or hasDarkFrame)) then
+            return
+        end
+
+        local state, hasCheckMarkNode, checkVisible, darkVisible = resolveCardState(frame)
+        seenLevels[level] = true
+        table.insert(cards, {
+            level = level,
+            state = state,
+            hasCheckMarkNode = hasCheckMarkNode,
+            checkVisible = checkVisible,
+            darkVisible = darkVisible,
+        })
+    end
+
     for _, child in ipairs(levels:GetChildren()) do
-        if child:IsA("Frame") then
-            local level = parseCardLevel(child)
-            if level then
-                local state, hasCheckMarkNode, checkVisible, darkVisible = resolveCardState(child)
-                table.insert(cards, {
-                    level = level,
-                    state = state,
-                    hasCheckMarkNode = hasCheckMarkNode,
-                    checkVisible = checkVisible,
-                    darkVisible = darkVisible,
-                })
-            end
+        tryAddCard(child)
+    end
+
+    if #cards == 0 then
+        for _, descendant in ipairs(levels:GetDescendants()) do
+            tryAddCard(descendant)
         end
     end
 
