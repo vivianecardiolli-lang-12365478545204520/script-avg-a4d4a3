@@ -48,6 +48,8 @@ function GameStateDetector.detect()
         return {
             location = "unknown",
             tutorialVisible = false,
+            reason = "player_gui_missing",
+            placeId = game.PlaceId,
         }
     end
 
@@ -58,20 +60,30 @@ function GameStateDetector.detect()
     local configuredMatchPlaceId = tonumber(config.automation.matchPlaceId)
 
     local location = "unknown"
+    local reason = "unresolved"
     if configuredLobbyPlaceId and placeId == configuredLobbyPlaceId then
         location = "lobby"
+        reason = "place_id_lobby"
     elseif configuredMatchPlaceId and placeId == configuredMatchPlaceId then
         location = "match"
+        reason = "place_id_match"
     else
         local map = workspace:FindFirstChild("Map")
         if map ~= nil then
             location = "match"
+            reason = "workspace_map_fallback"
+        else
+            reason = "unknown_no_map_fallback"
         end
     end
 
     return {
         location = location,
         tutorialVisible = tutorialVisible,
+        reason = reason,
+        placeId = placeId,
+        configuredLobbyPlaceId = configuredLobbyPlaceId,
+        configuredMatchPlaceId = configuredMatchPlaceId,
     }
 end
 

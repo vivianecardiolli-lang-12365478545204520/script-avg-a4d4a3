@@ -13,9 +13,30 @@ local Tracker = require("systems.tracker.tracker_system")
 local Orchestrator = {}
 local lastUnknownRecoveryAt = 0
 local UNKNOWN_RECOVERY_COOLDOWN_SECONDS = 20
+local lastStateLogKey = nil
 
 local function detectAndRun()
     local state = GameStateDetector.detect()
+    local stateLogKey = string.format(
+        "location=%s;tutorial=%s;reason=%s;placeId=%s",
+        tostring(state.location),
+        tostring(state.tutorialVisible),
+        tostring(state.reason),
+        tostring(state.placeId)
+    )
+    if stateLogKey ~= lastStateLogKey then
+        lastStateLogKey = stateLogKey
+        Logger.log(string.format(
+            "State detected location=%s tutorial=%s reason=%s placeId=%s configuredLobby=%s configuredMatch=%s",
+            tostring(state.location),
+            tostring(state.tutorialVisible),
+            tostring(state.reason),
+            tostring(state.placeId),
+            tostring(state.configuredLobbyPlaceId),
+            tostring(state.configuredMatchPlaceId)
+        ))
+    end
+
     StateContext.setLocation(state.location)
 
     if state.tutorialVisible then

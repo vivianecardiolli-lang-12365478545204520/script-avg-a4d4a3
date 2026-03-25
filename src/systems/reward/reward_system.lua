@@ -11,12 +11,11 @@ local PopupHandler = require("systems.reward.popup_handler")
 
 local RewardSystem = {}
 
-local networking = ReplicatedStorage:WaitForChild("Networking")
-
-local newPlayerRemote = networking:WaitForChild("NewPlayerRewardsEvent")
-local pirateRemote = networking:WaitForChild("APiratesWelcomeEvent")
-local dailyRemote = networking:WaitForChild("DailyRewardEvent")
-local milestonesRemote = networking:WaitForChild("Milestones"):WaitForChild("MilestonesEvent")
+local networking
+local newPlayerRemote
+local pirateRemote
+local dailyRemote
+local milestonesRemote
 local rng = Random.new()
 
 local DAILY_MIN_DELAY = 0.35
@@ -33,6 +32,39 @@ local MILESTONE_MIN_DELAY = 0.10
 local MILESTONE_MAX_DELAY = 0.25
 local MILESTONE_POST_CLAIM_MIN_DELAY = 0.12
 local MILESTONE_POST_CLAIM_MAX_DELAY = 0.25
+local REMOTE_RESOLVE_TIMEOUT_SECONDS = 5
+
+local function resolveRewardRemotes()
+    networking = ReplicatedStorage:FindFirstChild("Networking")
+    if not networking then
+        networking = ReplicatedStorage:WaitForChild("Networking", REMOTE_RESOLVE_TIMEOUT_SECONDS)
+    end
+    if not networking then
+        return false, "Networking not found"
+    end
+
+    newPlayerRemote = networking:FindFirstChild("NewPlayerRewardsEvent")
+    pirateRemote = networking:FindFirstChild("APiratesWelcomeEvent")
+    dailyRemote = networking:FindFirstChild("DailyRewardEvent")
+
+    local milestonesFolder = networking:FindFirstChild("Milestones")
+    milestonesRemote = milestonesFolder and milestonesFolder:FindFirstChild("MilestonesEvent") or nil
+
+    if not newPlayerRemote then
+        return false, "NewPlayerRewardsEvent not found"
+    end
+    if not pirateRemote then
+        return false, "APiratesWelcomeEvent not found"
+    end
+    if not dailyRemote then
+        return false, "DailyRewardEvent not found"
+    end
+    if not milestonesRemote then
+        return false, "Milestones.MilestonesEvent not found"
+    end
+
+    return true, nil
+end
 
 local function waitRandom(minSeconds, maxSeconds)
     task.wait(rng:NextNumber(minSeconds, maxSeconds))
@@ -656,6 +688,22 @@ local function claimLevelMilestones()
 end
 
 function RewardSystem.run()
+    local lobbyPlaceId = tonumber(config.automation and config.automation.lobbyPlaceId)
+    if lobbyPlaceId and game.PlaceId ~= lobbyPlaceId then
+        Logger.log(string.format(
+            "RewardSystem skipped: current placeId=%s is not lobby placeId=%s",
+            tostring(game.PlaceId),
+            tostring(lobbyPlaceId)
+        ))
+        return
+    end
+
+    local remotesOk, remotesErr = resolveRewardRemotes()
+    if not remotesOk then
+        Logger.log("RewardSystem skipped: " .. tostring(remotesErr))
+        return
+    end
+
     if config.rewards.EnableNewPlayerRewards then
         claimRewards(newPlayerRemote, "NewPlayers", "ReturningPlayerRewards")
         waitRandom(MENU_SWITCH_MIN_DELAY, MENU_SWITCH_MAX_DELAY)
