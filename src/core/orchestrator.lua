@@ -11,6 +11,8 @@ local RecoverySystem = require("systems.recovery.recovery_system")
 local Tracker = require("systems.tracker.tracker_system")
 
 local Orchestrator = {}
+local lastUnknownRecoveryAt = 0
+local UNKNOWN_RECOVERY_COOLDOWN_SECONDS = 20
 
 local function detectAndRun()
     local state = GameStateDetector.detect()
@@ -53,7 +55,11 @@ local function detectAndRun()
     end
 
     StatusBus.set("Sincronizando estado")
-    RecoverySystem.run("unknown_location")
+    local now = os.clock()
+    if now - lastUnknownRecoveryAt >= UNKNOWN_RECOVERY_COOLDOWN_SECONDS then
+        lastUnknownRecoveryAt = now
+        RecoverySystem.run("unknown_location")
+    end
 end
 
 function Orchestrator.run()

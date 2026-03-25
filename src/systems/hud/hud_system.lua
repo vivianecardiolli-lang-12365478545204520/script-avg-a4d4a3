@@ -72,12 +72,17 @@ local function buildHud()
     local frame = Instance.new("Frame")
     frame.Name = "Panel"
     frame.Parent = hudGui
-    frame.AnchorPoint = Vector2.new(1, 0)
-    frame.Position = UDim2.new(1, -12, 0, 12)
-    frame.Size = UDim2.new(0.28, 0, 0.16, 0)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.Size = UDim2.fromScale(0.42, 0.24)
     frame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
     frame.BackgroundTransparency = 0.2
     frame.ZIndex = 10000
+
+    local sizeConstraint = Instance.new("UISizeConstraint")
+    sizeConstraint.MinSize = Vector2.new(420, 190)
+    sizeConstraint.MaxSize = Vector2.new(900, 420)
+    sizeConstraint.Parent = frame
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
@@ -95,10 +100,10 @@ local function buildHud()
     padding.PaddingBottom = UDim.new(0, 8)
     padding.Parent = frame
 
-    gemsLabel = makeTextLabel("Gems", "Gemas: 0", frame, 0.00)
-    levelLabel = makeTextLabel("Level", "Level: 0", frame, 0.25)
-    traitsLabel = makeTextLabel("Traits", "Traits: 0", frame, 0.50)
-    statusLabel = makeTextLabel("Status", "Status: Idle", frame, 0.75)
+    gemsLabel = makeTextLabel("Gems", "💎 Gemas: 0", frame, 0.00)
+    levelLabel = makeTextLabel("Level", "⭐ Level: 0", frame, 0.25)
+    traitsLabel = makeTextLabel("Traits", "🔮 Traits: 0", frame, 0.50)
+    statusLabel = makeTextLabel("Status", "📌 Status: Idle", frame, 0.75)
 end
 
 local function refreshValues()
@@ -106,19 +111,19 @@ local function refreshValues()
         return
     end
     if gemsLabel then
-        gemsLabel.Text = "Gemas: " .. readAttribute("Gems")
+        gemsLabel.Text = "💎 Gemas: " .. readAttribute("Gems")
     end
     if levelLabel then
-        levelLabel.Text = "Level: " .. readAttribute("Level")
+        levelLabel.Text = "⭐ Level: " .. readAttribute("Level")
     end
     if traitsLabel then
-        traitsLabel.Text = "Traits: " .. readAttribute("TraitRerolls")
+        traitsLabel.Text = "🔮 Traits: " .. readAttribute("TraitRerolls")
     end
 end
 
 local function setStatusText(statusText)
     if statusLabel then
-        statusLabel.Text = string.format("%s: %s", tostring(config.hud.statusPrefix), tostring(statusText))
+        statusLabel.Text = string.format("📌 %s: %s", tostring(config.hud.statusPrefix), tostring(statusText))
     end
 end
 
