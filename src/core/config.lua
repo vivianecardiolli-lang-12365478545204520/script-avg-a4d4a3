@@ -51,6 +51,8 @@ config.automation = {
     enabled = pick(automationOverrides.enabled, true),
     tickSeconds = pick(automationOverrides.tickSeconds, 2),
     runLobbyPipelineOncePerSession = pick(automationOverrides.runLobbyPipelineOncePerSession, true),
+    lobbyPlaceId = pick(automationOverrides.lobbyPlaceId, 16146832113),
+    matchPlaceId = pick(automationOverrides.matchPlaceId, 16277809958),
 }
 
 local hudOverrides = runtimeConfig.hud or {}

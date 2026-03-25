@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local config = require("core.config")
 
 local GameStateDetector = {}
 
@@ -26,29 +27,6 @@ local function getPlayerGui()
     return player:FindFirstChild("PlayerGui")
 end
 
-local function isLobby(playerGui)
-    if not playerGui then
-        return false
-    end
-    local hud = playerGui:FindFirstChild("HUD")
-    return isUiVisible(hud)
-end
-
-local function isMatch(playerGui)
-    if not playerGui then
-        return false
-    end
-    local waveLabel = playerGui:FindFirstChild("WaveDisplay", true)
-    if isUiVisible(waveLabel) then
-        return true
-    end
-    local autoplay = playerGui:FindFirstChild("AutoPlay", true)
-    if isUiVisible(autoplay) then
-        return true
-    end
-    return false
-end
-
 local function isTutorialVisible(playerGui)
     if not playerGui then
         return false
@@ -74,14 +52,21 @@ function GameStateDetector.detect()
     end
 
     local tutorialVisible = isTutorialVisible(playerGui)
-    local lobby = isLobby(playerGui)
-    local match = isMatch(playerGui)
+    local placeId = game.PlaceId
+
+    local configuredLobbyPlaceId = tonumber(config.automation.lobbyPlaceId)
+    local configuredMatchPlaceId = tonumber(config.automation.matchPlaceId)
 
     local location = "unknown"
-    if lobby then
+    if configuredLobbyPlaceId and placeId == configuredLobbyPlaceId then
         location = "lobby"
-    elseif match then
+    elseif configuredMatchPlaceId and placeId == configuredMatchPlaceId then
         location = "match"
+    else
+        local map = workspace:FindFirstChild("Map")
+        if map ~= nil then
+            location = "match"
+        end
     end
 
     return {
