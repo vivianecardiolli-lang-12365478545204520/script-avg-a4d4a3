@@ -46,4 +46,18 @@ config.logger = {
     exportToClipboard = pick(loggerOverrides.exportToClipboard, false),
 }
 
+local automationOverrides = runtimeConfig.automation or {}
+config.automation = {
+    enabled = pick(automationOverrides.enabled, true),
+    tickSeconds = pick(automationOverrides.tickSeconds, 2),
+    runLobbyPipelineOncePerSession = pick(automationOverrides.runLobbyPipelineOncePerSession, true),
+}
+
+local hudOverrides = runtimeConfig.hud or {}
+config.hud = {
+    enabled = pick(hudOverrides.enabled, true),
+    toggleKey = pick(hudOverrides.toggleKey, "B"),
+    statusPrefix = pick(hudOverrides.statusPrefix, "Status"),
+}
+
 return config

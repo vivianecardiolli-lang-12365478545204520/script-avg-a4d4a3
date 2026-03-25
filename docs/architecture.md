@@ -1,33 +1,174 @@
-# Arquitetura do Projeto
+# Project Architecture
 
-## Estrutura
+## Current baseline (stable)
 
-- `main.lua`: único entrypoint do executor; carrega módulos via HTTP.
-- `src/app.lua`: orquestração principal do fluxo.
-- `src/core/`: base compartilhada (`config`, `logger`).
-- `src/systems/`: sistemas de automação por domínio.
-- `src/integrations/`: integrações externas (Google Sheets).
-- `src/utils/`: utilitários reutilizáveis.
+The project currently has two production-ready domains:
 
-## Fluxo principal
+1. `rewards` automation
+2. `tracker` (gems/traits/gold/level to sheet API)
+
+These two systems are considered stable and must keep working while new
+automation is introduced.
+
+## Non-breaking rule (mandatory)
+
+All next steps must preserve compatibility with the current behavior:
+
+1. Do not break `RewardSystem.run()`.
+2. Do not break `TrackerSystem.sendNow()` and `TrackerSystem.start()`.
+3. Add new modules above existing systems (orchestrator layer), not by replacing
+   working code in a single migration.
+4. Introduce new features behind config flags whenever possible.
+
+## Current runtime flow
 
 1. `RewardSystem.run()`
 2. `Tracker.sendNow()`
-3. `Tracker.startLoop()`
+3. `Tracker.start()`
 
-## Execução no executor
+## Target direction: "Kaitun" full automation
 
-- Configure `baseUrl` em `main.lua` apontando para a pasta `src/` hospedada.
-- Execute `main.lua` no executor.
-- Os módulos são carregados via HTTP sob demanda e com cache em memória.
+The target is an orchestrated flow that handles:
 
-Exemplo de configuração sensível em runtime (sem publicar token no GitHub):
+1. Lobby vs Match state detection
+2. Tutorial skip (pre-skip / post-skip scenarios)
+3. Lobby preparation pipeline
+4. Match runtime automation
+5. Recovery strategy on failures/timeouts
+6. Always-on HUD status panel
+
+## Target module layout (planned)
+
+This is the planned structure to be implemented incrementally:
+
+```text
+src/
+  app.lua
+  core/
+    config.lua
+    logger.lua
+    orchestrator.lua
+    game_state_detector.lua
+    state_context.lua
+    status_bus.lua
+  systems/
+    reward/                     (existing, keep)
+    tracker/                    (existing, keep)
+    hud/
+      hud_system.lua
+    tutorial/
+      tutorial_system.lua
+    lobby/
+      lobby_pipeline.lua
+    match/
+      match_pipeline.lua
+    recovery/
+      recovery_system.lua
+  integrations/
+    sheets_client.lua
+  utils/
+    numbers.lua
+```
+
+## Orchestrator state model (planned)
+
+High-level finite state machine:
+
+1. `BOOT`
+2. `STATE_DETECT`
+3. `TUTORIAL`
+4. `LOBBY_PIPELINE`
+5. `MATCH_PIPELINE`
+6. `RECOVERY`
+
+Transition rules:
+
+1. If tutorial is visible in any context, go to `TUTORIAL`.
+2. If in lobby and no tutorial, run lobby pipeline.
+3. If in match and no tutorial, run match pipeline.
+4. Any timeout/error routes to recovery, then returns to state detect.
+
+## Lobby pipeline (planned)
+
+Execution order:
+
+1. Rewards claim
+2. Read settings/state
+3. Apply settings
+4. Equip desired unit
+5. Move to matchmaking area
+6. Join match
+
+## Match pipeline (planned)
+
+Execution order:
+
+1. Verify AutoPlay state
+2. Enable AutoPlay if needed
+3. Enable/maintain anti-AFK
+
+## HUD requirements (planned)
+
+Single dark overlay panel:
+
+1. Responsive layout (anchors/scales, no hard-locked fixed viewport assumptions)
+2. Toggle key: `B`
+3. Display:
+   - Gems
+   - Level
+   - Traits
+   - Current status step
+4. Must coexist with console logs (HUD is visual guide, logs remain source for debug)
+
+## Contracts for new modules (planned)
+
+Each new module should follow a predictable contract:
+
+1. `detect()` for read-only detection when needed
+2. `run(context)` for actions
+3. Return object: `{ ok = boolean, nextState = string?, reason = string? }`
+4. Internal timeout and retry policy
+
+This keeps orchestrator integration deterministic.
+
+## Reliability strategy
+
+To minimize break risk on game updates:
+
+1. Use layered detection:
+   - Primary: reliable signals (server result/state change)
+   - Secondary: UI-specific checks
+   - Fallback: generic interaction with bounded retries
+2. Never block forever on UI.
+3. Add per-state timeouts and circuit-breaker behavior.
+4. Keep logs explicit about why state transitions happen.
+
+## Incremental implementation roadmap
+
+Implementation order (safe evolution):
+
+1. Add `orchestrator` with passive mode (detection + logs only).
+2. Add HUD system and status bus.
+3. Add tutorial system.
+4. Add lobby pipeline using existing `RewardSystem` (no rewrite).
+5. Add match pipeline (autoplay + anti-afk).
+6. Add recovery system and robust retry/timeout handling.
+
+Each step should be validated before moving to the next one.
+
+## Execution in executor
+
+1. Configure `baseUrl` in `main.lua` to point to hosted `src/`.
+2. Execute `main.lua`.
+3. Modules are loaded via HTTP with in-memory cache.
+
+Example runtime config for secrets (do not commit real values):
 
 ```lua
 getgenv().SCRIPT_AVG_CONFIG = {
     tracker = {
-        webhookUrl = "SUA_URL_PRIVADA",
-        secretToken = "SEU_TOKEN_PRIVADO",
+        webhookUrl = "PRIVATE_URL",
+        secretToken = "PRIVATE_TOKEN",
         intervalMinutes = 5,
         retry = {
             maxRetries = 3,
@@ -37,13 +178,8 @@ getgenv().SCRIPT_AVG_CONFIG = {
 }
 ```
 
-Exemplo de URL base:
+Example base URL:
 
 ```text
-https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/src/
+https://raw.githubusercontent.com/<user>/<repo>/main/src/
 ```
-
-## Observações
-
-- Não há geração de bundle.
-- A evolução do projeto ocorre mantendo múltiplos arquivos Lua em `src/`.
