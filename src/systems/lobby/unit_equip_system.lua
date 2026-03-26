@@ -12,6 +12,21 @@ local function devAlert(message)
     Logger.log(full)
 end
 
+local function getNativeRequire()
+    if type(getrenv) == "function" then
+        local env = getrenv()
+        if env and type(env.require) == "function" then
+            return env.require
+        end
+    end
+
+    if type(_G) == "table" and type(_G.require) == "function" then
+        return _G.require
+    end
+
+    return nil
+end
+
 local function resolveRemotes()
     local networking = ReplicatedStorage:FindFirstChild("Networking")
     if not networking then
@@ -44,7 +59,12 @@ local function resolveOwnedUnitsHandler()
         return nil, "StarterPlayer.Modules.Gameplay.Units.OwnedUnitsHandler nao encontrado"
     end
 
-    local ok, handlerOrErr = pcall(require, handlerModule)
+    local nativeRequire = getNativeRequire()
+    if type(nativeRequire) ~= "function" then
+        return nil, "Require nativo indisponivel para ModuleScript (getrenv().require)"
+    end
+
+    local ok, handlerOrErr = pcall(nativeRequire, handlerModule)
     if not ok then
         return nil, "Falha ao require OwnedUnitsHandler: " .. tostring(handlerOrErr)
     end
