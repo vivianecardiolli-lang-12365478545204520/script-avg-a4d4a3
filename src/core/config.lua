@@ -53,6 +53,8 @@ config.automation = {
     runLobbyPipelineOncePerSession = pick(automationOverrides.runLobbyPipelineOncePerSession, true),
     lobbyPlaceId = pick(automationOverrides.lobbyPlaceId, 16146832113),
     matchPlaceId = pick(automationOverrides.matchPlaceId, 16277809958),
+    equipUnitName = pick(automationOverrides.equipUnitName, "Bounty Hunter"),
+    equipSlot = pick(automationOverrides.equipSlot, 1),
 }
 
 local hudOverrides = runtimeConfig.hud or {}
