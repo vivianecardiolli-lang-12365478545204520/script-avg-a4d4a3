@@ -10,6 +10,21 @@ The project currently has two production-ready domains:
 These two systems are considered stable and must keep working while new
 automation is introduced.
 
+## Current implementation status
+
+Implemented and integrated:
+
+1. Lobby vs Match detection (primary by `PlaceId`, fallback by `workspace.Map`)
+2. Tutorial gate at startup (upvalue-based status + skip remote)
+3. Rewards execution in lobby only
+4. Unit equip step in lobby (best unit by level, target slot)
+5. Settings sync step in lobby:
+   - target map fully implemented
+   - random processing order
+   - random short delays per action
+   - runs once per script execution
+6. Tracker + HUD active
+
 ## Non-breaking rule (mandatory)
 
 All next steps must preserve compatibility with the current behavior:
@@ -88,16 +103,15 @@ Transition rules:
 3. If in match and no tutorial, run match pipeline.
 4. Any timeout/error routes to recovery, then returns to state detect.
 
-## Lobby pipeline (planned)
+## Lobby pipeline
 
 Execution order:
 
 1. Rewards claim
-2. Read settings/state
-3. Apply settings
-4. Equip desired unit
-5. Move to matchmaking area
-6. Join match
+2. Equip desired unit
+3. Apply settings (fully implemented, lobby-only, one-time per execution)
+4. Move to matchmaking area
+5. Join match
 
 ## Match pipeline (planned)
 

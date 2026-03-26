@@ -1,6 +1,7 @@
 local RewardSystem = require("systems.reward.reward_system")
 local Tracker = require("systems.tracker.tracker_system")
 local UnitEquipSystem = require("systems.lobby.unit_equip_system")
+local SettingsSystem = require("systems.lobby.settings_system")
 local Logger = require("core.logger")
 local StatusBus = require("core.status_bus")
 
@@ -36,8 +37,17 @@ function LobbyPipeline.run()
         }
     end
 
-    step("Lendo configuracoes")
-    step("Configurando settings")
+    local settingsResult = step("Configurando settings", function()
+        local result = SettingsSystem.run()
+        if not result or not result.ok then
+            Logger.log("Settings step falhou (continuando pipeline)")
+        end
+        return result
+    end)
+    if not settingsResult or not settingsResult.ok then
+        Logger.log("Settings apply failed: seguindo para proximas etapas")
+    end
+
     step("Indo para area de partidas")
     step("Entrando na partida")
 
