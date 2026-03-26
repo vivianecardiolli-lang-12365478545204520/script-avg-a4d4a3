@@ -39,16 +39,6 @@ local function detectAndRun()
 
     StateContext.setLocation(state.location)
 
-    if state.tutorialVisible then
-        local tutorialResult = TutorialSystem.run(state)
-        if not tutorialResult.ok then
-            RecoverySystem.run("tutorial_failed")
-            return
-        end
-        StateContext.markTutorialHandled()
-        return
-    end
-
     local context = StateContext.get()
 
     if state.location == "lobby" then
@@ -87,6 +77,15 @@ function Orchestrator.run()
     if not config.automation.enabled then
         Logger.log("Automation disabled by config")
         return
+    end
+
+    local tutorialResult = TutorialSystem.run()
+    if not tutorialResult.ok then
+        RecoverySystem.run("tutorial_failed")
+        return
+    end
+    if tutorialResult.handled then
+        StateContext.markTutorialHandled()
     end
 
     task.spawn(function()
