@@ -5,6 +5,9 @@ local Logger = require("core.logger")
 local config = require("core.config")
 
 local UnitEquipSystem = {}
+local rng = Random.new()
+local REMOVE_TO_EQUIP_MIN_DELAY = 0.06
+local REMOVE_TO_EQUIP_MAX_DELAY = 0.18
 
 local function devAlert(message)
     local full = "[KAITUN] ATENCAO DESENVOLVEDOR (UnitEquip): " .. tostring(message)
@@ -144,15 +147,17 @@ local function runEquip(unitName, slot)
     end
 
     recentRemote:FireServer("Remove", bestUUID)
-    task.wait(0.1)
+    local waitBetween = rng:NextNumber(REMOVE_TO_EQUIP_MIN_DELAY, REMOVE_TO_EQUIP_MAX_DELAY)
+    task.wait(waitBetween)
     equipRemote:FireServer("Equip", bestUUID, slot)
 
     Logger.log(string.format(
-        "UnitEquip enviado: unit='%s' uuid=%s level=%d slot=%d",
+        "UnitEquip enviado: unit='%s' uuid=%s level=%d slot=%d removeToEquipDelay=%.3fs",
         tostring(unitName),
         tostring(bestUUID),
         bestLevel,
-        slot
+        slot,
+        waitBetween
     ))
 
     return {

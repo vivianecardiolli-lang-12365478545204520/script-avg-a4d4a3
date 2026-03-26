@@ -10,8 +10,9 @@ local function step(statusText, fn)
     StatusBus.set(statusText)
     Logger.log(statusText)
     if fn then
-        fn()
+        return fn()
     end
+    return nil
 end
 
 function LobbyPipeline.run()
@@ -20,12 +21,20 @@ function LobbyPipeline.run()
         Tracker.sendNow()
     end)
 
-    step("Equipando unidade", function()
+    local equipResult = step("Equipando unidade", function()
         local result = UnitEquipSystem.run()
         if not result or not result.ok then
-            Logger.log("UnitEquip step finalizou com aviso (continuando pipeline)")
+            Logger.log("UnitEquip step falhou (pipeline interrompido por seguranca)")
         end
+        return result
     end)
+    if not equipResult or not equipResult.ok then
+        return {
+            ok = false,
+            nextState = "recovery",
+            reason = "unit_equip_failed",
+        }
+    end
 
     step("Lendo configuracoes")
     step("Configurando settings")

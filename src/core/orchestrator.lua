@@ -53,6 +53,7 @@ local function detectAndRun()
             return
         end
 
+        Logger.log("Lobby pipeline failed: " .. tostring(result.reason))
         RecoverySystem.run("lobby_pipeline_failed")
         return
     end
@@ -81,6 +82,7 @@ function Orchestrator.run()
 
     local tutorialResult = TutorialSystem.run()
     if not tutorialResult.ok then
+        Logger.log("Tutorial gate failed: " .. tostring(tutorialResult.reason))
         RecoverySystem.run("tutorial_failed")
         return
     end

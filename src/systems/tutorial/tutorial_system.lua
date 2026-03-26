@@ -130,9 +130,10 @@ function TutorialSystem.run()
     if status == nil then
         logDetectionUnavailable(detectionErr)
         return {
-            ok = true,
+            ok = false,
             handled = false,
             status = 0,
+            reason = "tutorial_status_detection_failed",
         }
     end
 
@@ -150,6 +151,13 @@ function TutorialSystem.run()
     local fired = fireSkipTutorial(status)
     if fired then
         task.wait(0.35)
+    else
+        return {
+            ok = false,
+            handled = false,
+            status = status,
+            reason = "tutorial_skip_remote_failed",
+        }
     end
 
     return {
