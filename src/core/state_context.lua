@@ -3,6 +3,7 @@ local StateContext = {}
 local context = {
     lastLocation = "unknown",
     tutorialHandledAtLeastOnce = false,
+    tutorialGateValidated = false,
     didInitialLobbyPipeline = false,
     retries = 0,
 }
@@ -17,6 +18,10 @@ end
 
 function StateContext.markTutorialHandled()
     context.tutorialHandledAtLeastOnce = true
+end
+
+function StateContext.markTutorialValidated()
+    context.tutorialGateValidated = true
 end
 
 function StateContext.markInitialLobbyPipelineDone()

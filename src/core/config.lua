@@ -47,6 +47,7 @@ config.logger = {
 }
 
 local automationOverrides = runtimeConfig.automation or {}
+local antiAfkOverrides = automationOverrides.antiAfk or {}
 config.automation = {
     enabled = pick(automationOverrides.enabled, true),
     tickSeconds = pick(automationOverrides.tickSeconds, 2),
@@ -55,6 +56,27 @@ config.automation = {
     matchPlaceId = pick(automationOverrides.matchPlaceId, 16277809958),
     equipUnitName = pick(automationOverrides.equipUnitName, "Bounty Hunter"),
     equipSlot = pick(automationOverrides.equipSlot, 1),
+    matchStage = pick(automationOverrides.matchStage, "Stage1"),
+    matchDifficulty = pick(automationOverrides.matchDifficulty, "Normal"),
+    matchAct = pick(automationOverrides.matchAct, "Act1"),
+    matchStageType = pick(automationOverrides.matchStageType, "Story"),
+    matchFriendsOnly = pick(automationOverrides.matchFriendsOnly, false),
+    antiAfk = {
+        enabled = pick(antiAfkOverrides.enabled, true),
+        debugMode = pick(antiAfkOverrides.debugMode, true),
+        movementEnabled = pick(antiAfkOverrides.movementEnabled, true),
+        jumpEnabled = pick(antiAfkOverrides.jumpEnabled, true),
+        roamRadiusMin = pick(antiAfkOverrides.roamRadiusMin, 10),
+        roamRadiusMax = pick(antiAfkOverrides.roamRadiusMax, 50),
+        intervalMinSeconds = pick(antiAfkOverrides.intervalMinSeconds, 180),
+        intervalMaxSeconds = pick(antiAfkOverrides.intervalMaxSeconds, 600),
+        jumpChancePercent = pick(antiAfkOverrides.jumpChancePercent, 40),
+        maxJumpsPerMovement = pick(antiAfkOverrides.maxJumpsPerMovement, 2),
+        moveToTimeoutSeconds = pick(antiAfkOverrides.moveToTimeoutSeconds, 25),
+        chamblerHeartbeatSeconds = pick(antiAfkOverrides.chamblerHeartbeatSeconds, 5),
+        autoExportLogsToClipboard = pick(antiAfkOverrides.autoExportLogsToClipboard, false),
+        exportIntervalSeconds = pick(antiAfkOverrides.exportIntervalSeconds, 300),
+    },
 }
 
 local hudOverrides = runtimeConfig.hud or {}

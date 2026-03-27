@@ -7,6 +7,7 @@ local HudSystem = require("systems.hud.hud_system")
 local TutorialSystem = require("systems.tutorial.tutorial_system")
 local LobbyPipeline = require("systems.lobby.lobby_pipeline")
 local MatchPipeline = require("systems.match.match_pipeline")
+local AntiAfkSystem = require("systems.match.anti_afk_system")
 local RecoverySystem = require("systems.recovery.recovery_system")
 local Tracker = require("systems.tracker.tracker_system")
 
@@ -38,6 +39,10 @@ local function detectAndRun()
     end
 
     StateContext.setLocation(state.location)
+    local antiAfkResult = AntiAfkSystem.updateLocation(state.location)
+    if not antiAfkResult.ok then
+        Logger.log("Anti-AFK location update failed: " .. tostring(antiAfkResult.reason))
+    end
 
     local context = StateContext.get()
 
@@ -86,8 +91,16 @@ function Orchestrator.run()
         RecoverySystem.run("tutorial_failed")
         return
     end
+    StateContext.markTutorialValidated()
     if tutorialResult.handled then
         StateContext.markTutorialHandled()
+    end
+
+    local antiAfkStartResult = AntiAfkSystem.start()
+    if not antiAfkStartResult.ok then
+        Logger.log("Falha ao iniciar anti-AFK: " .. tostring(antiAfkStartResult.reason))
+        RecoverySystem.run("anti_afk_start_failed")
+        return
     end
 
     task.spawn(function()
