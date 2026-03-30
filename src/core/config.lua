@@ -48,10 +48,12 @@ config.logger = {
 
 local automationOverrides = runtimeConfig.automation or {}
 local antiAfkOverrides = automationOverrides.antiAfk or {}
+local customPlayOverrides = automationOverrides.customPlay or {}
 config.automation = {
     enabled = pick(automationOverrides.enabled, true),
     tickSeconds = pick(automationOverrides.tickSeconds, 2),
     runLobbyPipelineOncePerSession = pick(automationOverrides.runLobbyPipelineOncePerSession, true),
+    playMode = pick(automationOverrides.playMode, "native"),
     lobbyPlaceId = pick(automationOverrides.lobbyPlaceId, 16146832113),
     matchPlaceId = pick(automationOverrides.matchPlaceId, 16277809958),
     equipUnitName = pick(automationOverrides.equipUnitName, "Bounty Hunter"),
@@ -61,6 +63,29 @@ config.automation = {
     matchAct = pick(automationOverrides.matchAct, "Act1"),
     matchStageType = pick(automationOverrides.matchStageType, "Story"),
     matchFriendsOnly = pick(automationOverrides.matchFriendsOnly, false),
+    customPlay = {
+        unitName = pick(customPlayOverrides.unitName, "Bounty Hunter"),
+        slotIndex = pick(customPlayOverrides.slotIndex, 1),
+        basePositions = pick(customPlayOverrides.basePositions, {
+            Vector3.new(436.09, 5.30, -344.17),
+            Vector3.new(441.93, 5.30, -349.75),
+            Vector3.new(433.46, 5.30, -353.14),
+            Vector3.new(422.96, 5.30, -349.97),
+        }),
+        placementCooldownSeconds = pick(customPlayOverrides.placementCooldownSeconds, 2.5),
+        validationAttempts = pick(customPlayOverrides.validationAttempts, 15),
+        jitterMin = pick(customPlayOverrides.jitterMin, -3),
+        jitterMax = pick(customPlayOverrides.jitterMax, 3),
+        dpsStopMinSeconds = pick(customPlayOverrides.dpsStopMinSeconds, 0.10),
+        dpsStopMaxSeconds = pick(customPlayOverrides.dpsStopMaxSeconds, 0.20),
+        placeReactionMinSeconds = pick(customPlayOverrides.placeReactionMinSeconds, 0.25),
+        placeReactionMaxSeconds = pick(customPlayOverrides.placeReactionMaxSeconds, 0.45),
+        loopDelayMinSeconds = pick(customPlayOverrides.loopDelayMinSeconds, 2.5),
+        loopDelayMaxSeconds = pick(customPlayOverrides.loopDelayMaxSeconds, 5.0),
+        upgradeDelayMinSeconds = pick(customPlayOverrides.upgradeDelayMinSeconds, 0.20),
+        upgradeDelayMaxSeconds = pick(customPlayOverrides.upgradeDelayMaxSeconds, 0.40),
+        maxPlacementsFallback = pick(customPlayOverrides.maxPlacementsFallback, 4),
+    },
     antiAfk = {
         enabled = pick(antiAfkOverrides.enabled, true),
         debugMode = pick(antiAfkOverrides.debugMode, true),
