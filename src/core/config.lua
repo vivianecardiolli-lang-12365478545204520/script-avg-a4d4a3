@@ -14,16 +14,27 @@ local config = {}
 
 local rewardOverrides = runtimeConfig.rewards or {}
 config.rewards = {
+    claimMode = pick(rewardOverrides.claimMode, "module"),
     EnableNewPlayerRewards = pick(rewardOverrides.EnableNewPlayerRewards, true),
     EnablePirateRewards = pick(rewardOverrides.EnablePirateRewards, true),
     EnableSpecialRewards = pick(rewardOverrides.EnableSpecialRewards, true),
     EnableWinterRewards = pick(rewardOverrides.EnableWinterRewards, true),
     EnableLevelMilestones = pick(rewardOverrides.EnableLevelMilestones, true),
+    EnableCollectionMilestones = pick(rewardOverrides.EnableCollectionMilestones, true),
+    EnableBattlePass = pick(rewardOverrides.EnableBattlePass, true),
+    EnableQuests = pick(rewardOverrides.EnableQuests, true),
     LevelMilestonesTeleportToNpc = pick(rewardOverrides.LevelMilestonesTeleportToNpc, true),
     LevelMilestonesReturnToOriginalPosition = pick(rewardOverrides.LevelMilestonesReturnToOriginalPosition, true),
     LevelMilestonesNpcName = pick(rewardOverrides.LevelMilestonesNpcName, "Gilgamesh"),
     LevelMilestonesTeleportRadius = pick(rewardOverrides.LevelMilestonesTeleportRadius, 3),
     LevelMilestonesTeleportYOffset = pick(rewardOverrides.LevelMilestonesTeleportYOffset, 3),
+    ModuleEnableUiSuppressor = pick(rewardOverrides.ModuleEnableUiSuppressor, true),
+    ModuleSyncWaitSeconds = pick(rewardOverrides.ModuleSyncWaitSeconds, 12),
+    ModuleDelayBetweenTypesMinSeconds = pick(rewardOverrides.ModuleDelayBetweenTypesMinSeconds, 2.0),
+    ModuleDelayBetweenTypesMaxSeconds = pick(rewardOverrides.ModuleDelayBetweenTypesMaxSeconds, 5.0),
+    ModuleDelayBetweenClaimsMinSeconds = pick(rewardOverrides.ModuleDelayBetweenClaimsMinSeconds, 2.5),
+    ModuleDelayBetweenClaimsMaxSeconds = pick(rewardOverrides.ModuleDelayBetweenClaimsMaxSeconds, 5.5),
+    ModuleBattlePassMaxLevel = pick(rewardOverrides.ModuleBattlePassMaxLevel, 50),
 }
 
 local trackerOverrides = runtimeConfig.tracker or {}
