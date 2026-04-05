@@ -60,6 +60,7 @@ config.logger = {
 local automationOverrides = runtimeConfig.automation or {}
 local antiAfkOverrides = automationOverrides.antiAfk or {}
 local customPlayOverrides = automationOverrides.customPlay or {}
+local lobbyUiGuardOverrides = automationOverrides.lobbyUiGuard or {}
 config.automation = {
     enabled = pick(automationOverrides.enabled, true),
     tickSeconds = pick(automationOverrides.tickSeconds, 2),
@@ -112,6 +113,14 @@ config.automation = {
         chamblerHeartbeatSeconds = pick(antiAfkOverrides.chamblerHeartbeatSeconds, 5),
         autoExportLogsToClipboard = pick(antiAfkOverrides.autoExportLogsToClipboard, false),
         exportIntervalSeconds = pick(antiAfkOverrides.exportIntervalSeconds, 300),
+    },
+    lobbyUiGuard = {
+        enabled = pick(lobbyUiGuardOverrides.enabled, true),
+        tickSeconds = pick(lobbyUiGuardOverrides.tickSeconds, 0.5),
+        resolveRetrySeconds = pick(lobbyUiGuardOverrides.resolveRetrySeconds, 5),
+        closeLogCooldownSeconds = pick(lobbyUiGuardOverrides.closeLogCooldownSeconds, 15),
+        enableUpdateLogOptOut = pick(lobbyUiGuardOverrides.enableUpdateLogOptOut, true),
+        suppressDuringLegacyRewardClaim = pick(lobbyUiGuardOverrides.suppressDuringLegacyRewardClaim, true),
     },
 }
 

@@ -6,6 +6,7 @@ local GameStateDetector = require("core.game_state_detector")
 local HudSystem = require("systems.hud.hud_system")
 local TutorialSystem = require("systems.tutorial.tutorial_system")
 local LobbyPipeline = require("systems.lobby.lobby_pipeline")
+local LobbyUiGuardSystem = require("systems.lobby.lobby_ui_guard_system")
 local MatchPipeline = require("systems.match.match_pipeline")
 local AntiAfkSystem = require("systems.match.anti_afk_system")
 local RecoverySystem = require("systems.recovery.recovery_system")
@@ -39,6 +40,11 @@ local function detectAndRun()
     end
 
     StateContext.setLocation(state.location)
+    local lobbyUiGuardResult = LobbyUiGuardSystem.updateLocation(state.location)
+    if not lobbyUiGuardResult.ok then
+        Logger.log("Lobby UI Guard location update failed: " .. tostring(lobbyUiGuardResult.reason))
+    end
+
     local antiAfkResult = AntiAfkSystem.updateLocation(state.location)
     if not antiAfkResult.ok then
         Logger.log("Anti-AFK location update failed: " .. tostring(antiAfkResult.reason))
@@ -94,6 +100,13 @@ function Orchestrator.run()
     StateContext.markTutorialValidated()
     if tutorialResult.handled then
         StateContext.markTutorialHandled()
+    end
+
+    local lobbyUiGuardStartResult = LobbyUiGuardSystem.start()
+    if not lobbyUiGuardStartResult.ok then
+        Logger.log("Falha ao iniciar Lobby UI Guard: " .. tostring(lobbyUiGuardStartResult.reason))
+        RecoverySystem.run("lobby_ui_guard_start_failed")
+        return
     end
 
     local antiAfkStartResult = AntiAfkSystem.start()
