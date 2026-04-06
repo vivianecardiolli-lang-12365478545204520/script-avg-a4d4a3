@@ -129,6 +129,7 @@ config.hud = {
     enabled = pick(hudOverrides.enabled, true),
     toggleKey = pick(hudOverrides.toggleKey, "B"),
     statusPrefix = pick(hudOverrides.statusPrefix, "Status"),
+    diagnosticsEnabled = pick(hudOverrides.diagnosticsEnabled, false),
 }
 
 return config

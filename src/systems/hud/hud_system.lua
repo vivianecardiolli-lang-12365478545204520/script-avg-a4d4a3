@@ -3,6 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local config = require("core.config")
 local StatusBus = require("core.status_bus")
+local Logger = require("core.logger")
 
 local HudSystem = {}
 
@@ -30,6 +31,108 @@ local dragState = {
     dragStart = nil,
     buttonStart = nil,
 }
+local diagnostics = {
+    enabled = false,
+    lastLogAt = {},
+    lastValueByKey = {},
+}
+
+local function diagLog(key, message)
+    if not diagnostics.enabled then
+        return
+    end
+
+    local now = os.clock()
+    local minInterval = 0.15
+    local lastAt = diagnostics.lastLogAt[key] or 0
+    if now - lastAt < minInterval then
+        return
+    end
+
+    diagnostics.lastLogAt[key] = now
+    Logger.log("[HUD-DIAG] " .. tostring(message))
+end
+
+local function udim2ToString(v)
+    if typeof(v) ~= "UDim2" then
+        return tostring(v)
+    end
+    return string.format("UDim2(%0.3f,%d,%0.3f,%d)", v.X.Scale, v.X.Offset, v.Y.Scale, v.Y.Offset)
+end
+
+local function colorToString(v)
+    if typeof(v) ~= "Color3" then
+        return tostring(v)
+    end
+    return string.format("Color3(%0.3f,%0.3f,%0.3f)", v.R, v.G, v.B)
+end
+
+local function watchProperty(instance, instanceName, propertyName, formatter)
+    if not diagnostics.enabled or not instance then
+        return
+    end
+
+    local function emit()
+        local value = instance[propertyName]
+        local text = formatter and formatter(value) or tostring(value)
+        local dedupeKey = instanceName .. "." .. propertyName
+        if diagnostics.lastValueByKey[dedupeKey] == text then
+            return
+        end
+        diagnostics.lastValueByKey[dedupeKey] = text
+        diagLog(dedupeKey, string.format("%s.%s => %s", instanceName, propertyName, text))
+    end
+
+    emit()
+    instance:GetPropertyChangedSignal(propertyName):Connect(emit)
+end
+
+local function attachDiagnostics()
+    diagnostics.enabled = config.hud and config.hud.diagnosticsEnabled == true
+    if not diagnostics.enabled then
+        return
+    end
+
+    diagnostics.lastLogAt = {}
+    diagnostics.lastValueByKey = {}
+    diagLog("boot", "Diagnostico de HUD ativado.")
+
+    watchProperty(panel, "Panel", "Size", udim2ToString)
+    watchProperty(panel, "Panel", "Position", udim2ToString)
+    watchProperty(panel, "Panel", "BackgroundTransparency", tostring)
+    watchProperty(panel, "Panel", "BackgroundColor3", colorToString)
+    watchProperty(panel, "Panel", "Visible", tostring)
+
+    watchProperty(closeButton, "CloseButton", "AutoButtonColor", tostring)
+    watchProperty(closeButton, "CloseButton", "BackgroundTransparency", tostring)
+    watchProperty(closeButton, "CloseButton", "BackgroundColor3", colorToString)
+    watchProperty(closeButton, "CloseButton", "Size", udim2ToString)
+
+    watchProperty(floatingButton, "FloatingButton", "Visible", tostring)
+    watchProperty(floatingButton, "FloatingButton", "Position", udim2ToString)
+
+    panel.ChildAdded:Connect(function(child)
+        diagLog("panel.child_added", "Panel.ChildAdded -> " .. child.ClassName .. " (" .. child.Name .. ")")
+    end)
+    panel.DescendantAdded:Connect(function(desc)
+        if desc:IsA("UIScale") or desc:IsA("UIPadding") or desc:IsA("UIAspectRatioConstraint") then
+            diagLog("panel.desc_added", "Panel.DescendantAdded -> " .. desc.ClassName .. " (" .. desc.Name .. ")")
+        end
+    end)
+
+    closeButton.MouseEnter:Connect(function()
+        diagLog("close.hover.enter", "CloseButton.MouseEnter")
+    end)
+    closeButton.MouseLeave:Connect(function()
+        diagLog("close.hover.leave", "CloseButton.MouseLeave")
+    end)
+    panel.MouseEnter:Connect(function()
+        diagLog("panel.hover.enter", "Panel.MouseEnter")
+    end)
+    panel.MouseLeave:Connect(function()
+        diagLog("panel.hover.leave", "Panel.MouseLeave")
+    end)
+end
 
 local function getPlayer()
     return Players.LocalPlayer
@@ -369,6 +472,7 @@ function HudSystem.start()
     end
 
     buildHud()
+    attachDiagnostics()
     refreshValues()
     setStatusText(StatusBus.get())
     bindToggleKey()
