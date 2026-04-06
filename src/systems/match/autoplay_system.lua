@@ -3,6 +3,7 @@ local StarterPlayer = game:GetService("StarterPlayer")
 
 local Logger = require("core.logger")
 local config = require("core.config")
+local StatusBus = require("core.status_bus")
 
 local AutoPlaySystem = {}
 
@@ -102,6 +103,7 @@ function AutoPlaySystem.run()
 
     if not isPlaying then
         Logger.log("[AutoPlay] Desativado. Enviando Toggle.")
+        StatusBus.setDetail("Partida: AutoPlay nativo desativado, enviando toggle")
         event:FireServer("Toggle")
         return { ok = true, toggled = true }
     end
@@ -110,6 +112,7 @@ function AutoPlaySystem.run()
         lastActiveLogAt = now
         Logger.log("[AutoPlay] Ja esta ativo.")
     end
+    StatusBus.setDetail("Partida: AutoPlay nativo ativo")
 
     return { ok = true, toggled = false }
 end

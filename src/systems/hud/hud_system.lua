@@ -30,6 +30,7 @@ local gemsLabel
 local levelLabel
 local traitsLabel
 local statusLabel
+local detailLabel
 
 local isMenuVisible = true
 local floatingPosition = UDim2.new(0, 0, 0, 0)
@@ -168,6 +169,7 @@ local function updateTextSizing()
     local h = rootFrame.AbsoluteSize.Y
     local baseSize = math.floor(math.clamp(h * 0.09, 40, 86))
     local statusSize = math.floor(math.clamp(baseSize * 0.92, 36, 80))
+    local detailSize = math.floor(math.clamp(baseSize * 0.70, 26, 62))
 
     if gemsLabel then
         gemsLabel.TextSize = baseSize
@@ -180,6 +182,9 @@ local function updateTextSizing()
     end
     if statusLabel then
         statusLabel.TextSize = statusSize
+    end
+    if detailLabel then
+        detailLabel.TextSize = detailSize
     end
 end
 
@@ -201,7 +206,18 @@ end
 
 local function setStatusText(statusText)
     if statusLabel then
-        statusLabel.Text = string.format("%s Status: %s", EMOJI_STATUS, tostring(statusText))
+        local prefix = tostring((config.hud and config.hud.statusPrefix) or "Status")
+        statusLabel.Text = string.format("%s %s: %s", EMOJI_STATUS, prefix, tostring(statusText))
+    end
+end
+
+local function setDetailText(detailText)
+    if detailLabel then
+        local detail = tostring(detailText or "-")
+        if detail == "" then
+            detail = "-"
+        end
+        detailLabel.Text = "Detalhe: " .. detail
     end
 end
 
@@ -530,6 +546,7 @@ local function buildHud()
     levelLabel = makeValueLabel("RuntimeOverlayStatsLevel", string.format("%s Level: 0", EMOJI_LEVEL), contentFrame)
     traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), contentFrame)
     statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), contentFrame)
+    detailLabel = makeValueLabel("RuntimeOverlayDetail", "Detalhe: -", contentFrame)
 
     closeButton.Activated:Connect(function()
         closeMenu()
@@ -582,6 +599,10 @@ function HudSystem.setStatus(statusText)
     setStatusText(statusText)
 end
 
+function HudSystem.setDetail(detailText)
+    setDetailText(detailText)
+end
+
 function HudSystem.start()
     if not config.hud.enabled then
         return
@@ -592,12 +613,14 @@ function HudSystem.start()
     updateTextSizing()
     refreshValues()
     setStatusText(StatusBus.get())
+    setDetailText(StatusBus.getDetail and StatusBus.getDetail() or "-")
     bindToggleKey()
     applyVisibility()
     enforceRootGuard()
 
-    StatusBus.subscribe(function(newStatus)
+    StatusBus.subscribe(function(newStatus, newDetail)
         setStatusText(newStatus)
+        setDetailText(newDetail)
     end)
 
     local player = getPlayer()

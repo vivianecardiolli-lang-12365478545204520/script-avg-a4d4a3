@@ -24,15 +24,25 @@ function MatchPipeline.run()
 
     if modeLower == "native" then
         StatusBus.set("Verificando autoplay nativo")
+        StatusBus.setDetail("Checando estado do AutoPlay nativo")
         local autoPlayResult = AutoPlaySystem.run()
         if not autoPlayResult.ok then
             Logger.log("AutoPlay native check failed: " .. tostring(autoPlayResult.reason))
+            StatusBus.setDetail("Falha no AutoPlay nativo: " .. tostring(autoPlayResult.reason))
+        elseif autoPlayResult.toggled then
+            StatusBus.setDetail("AutoPlay nativo ativado")
+        else
+            StatusBus.setDetail("AutoPlay nativo ja ativo")
         end
     elseif modeLower == "custom" then
         StatusBus.set("Verificando autoplay custom")
+        StatusBus.setDetail("Checando loop de automacao custom")
         local customPlayResult = CustomPlaySystem.run()
         if not customPlayResult.ok then
             Logger.log("AutoPlay custom check failed: " .. tostring(customPlayResult.reason))
+            StatusBus.setDetail("Falha no AutoPlay custom: " .. tostring(customPlayResult.reason))
+        else
+            StatusBus.setDetail("AutoPlay custom em execucao")
         end
     else
         local message = "[KAITUN] ATENCAO DESENVOLVEDOR (MatchPipeline): automation.playMode invalido. Use 'native' ou 'custom'. Valor atual: " .. tostring(mode)
@@ -41,6 +51,7 @@ function MatchPipeline.run()
             warn(message)
             Logger.log(message)
         end
+        StatusBus.setDetail("playMode invalido: " .. tostring(mode))
         return {
             ok = false,
             nextState = "recovery",

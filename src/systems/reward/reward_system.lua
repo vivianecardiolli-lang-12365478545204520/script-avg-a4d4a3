@@ -1,5 +1,6 @@
 local config = require("core.config")
 local Logger = require("core.logger")
+local StatusBus = require("core.status_bus")
 
 local LegacyUiRewardSystem = require("systems.reward.reward_ui_legacy_system")
 local ModuleRewardSystem = require("systems.reward.reward_module_system")
@@ -13,12 +14,14 @@ function RewardSystem.run()
 
     if normalizedMode == "module" then
         Logger.log("RewardSystem mode=module")
+        StatusBus.setDetail("Rewards em modo module")
         ModuleRewardSystem.run()
         return
     end
 
     if normalizedMode == "legacy_ui" then
         Logger.log("RewardSystem mode=legacy_ui")
+        StatusBus.setDetail("Rewards em modo legacy_ui")
         LegacyUiRewardSystem.run()
         return
     end
@@ -29,6 +32,7 @@ function RewardSystem.run()
         warn(message)
         Logger.log(message)
     end
+    StatusBus.setDetail("claimMode invalido: " .. tostring(mode))
 end
 
 return RewardSystem

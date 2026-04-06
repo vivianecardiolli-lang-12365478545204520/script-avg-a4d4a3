@@ -127,7 +127,7 @@ config.automation = {
 local hudOverrides = runtimeConfig.hud or {}
 config.hud = {
     enabled = pick(hudOverrides.enabled, true),
-    toggleKey = pick(hudOverrides.toggleKey, "B"),
+    toggleKey = pick(hudOverrides.toggleKey, "RightShift"),
     statusPrefix = pick(hudOverrides.statusPrefix, "Status"),
     diagnosticsEnabled = pick(hudOverrides.diagnosticsEnabled, false),
 }
