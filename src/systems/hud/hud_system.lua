@@ -16,7 +16,7 @@ local EMOJI_FLOATING = utf8.char(0x26A1)
 local ROOT_NAME = "RuntimeOverlayRoot"
 local GUI_NAME = "RuntimeOverlayGui"
 
-local ROOT_BASE_SIZE = UDim2.fromScale(0.94, 0.9)
+local ROOT_BASE_SIZE = UDim2.fromScale(0.752, 0.9)
 local ROOT_BASE_POSITION = UDim2.fromScale(0.5, 0.5)
 local ROOT_BASE_BG_COLOR = Color3.fromRGB(16, 18, 24)
 local ROOT_BASE_BG_TRANSPARENCY = 0.1
@@ -32,7 +32,8 @@ local traitsLabel
 local statusLabel
 
 local isMenuVisible = true
-local floatingPosition = UDim2.new(0.5, 0, 0, 26)
+local floatingPosition = UDim2.new(0, 0, 0, 0)
+local hasCustomFloatingPosition = false
 local floatingDrag = {
     dragging = false,
     startInput = nil,
@@ -150,14 +151,23 @@ local function clampFloatingToViewport()
     floatingButton.Position = floatingPosition
 end
 
+local function setDefaultFloatingPosition()
+    if not hudGui then
+        return
+    end
+    local viewport = hudGui.AbsoluteSize
+    local centerX = math.floor(viewport.X * 0.5)
+    floatingPosition = UDim2.new(0, centerX, 0, 56)
+end
+
 local function updateTextSizing()
     if not rootFrame then
         return
     end
 
     local h = rootFrame.AbsoluteSize.Y
-    local baseSize = math.floor(math.clamp(h * 0.075, 34, 72))
-    local statusSize = math.floor(math.clamp(baseSize * 0.92, 30, 66))
+    local baseSize = math.floor(math.clamp(h * 0.09, 40, 86))
+    local statusSize = math.floor(math.clamp(baseSize * 0.92, 36, 80))
 
     if gemsLabel then
         gemsLabel.TextSize = baseSize
@@ -180,6 +190,9 @@ local function applyVisibility()
     if floatingButton then
         floatingButton.Visible = not isMenuVisible
         if floatingButton.Visible then
+            if not hasCustomFloatingPosition then
+                setDefaultFloatingPosition()
+            end
             floatingButton.Position = floatingPosition
             clampFloatingToViewport()
         end
@@ -293,8 +306,8 @@ local function makeValueLabel(name, text, parent)
     label.ZIndex = 10001
 
     local textConstraint = Instance.new("UITextSizeConstraint")
-    textConstraint.MinTextSize = 30
-    textConstraint.MaxTextSize = 72
+    textConstraint.MinTextSize = 36
+    textConstraint.MaxTextSize = 86
     textConstraint.Parent = label
 
     return label
@@ -351,7 +364,10 @@ local function bindFloatingDragAndTap()
         end
 
         floatingDrag.dragging = false
-        floatingPosition = floatingButton.Position
+        if floatingDrag.moved then
+            floatingPosition = floatingButton.Position
+            hasCustomFloatingPosition = true
+        end
 
         if not floatingDrag.moved then
             openMenu()
@@ -523,6 +539,9 @@ local function buildHud()
     floatingButton.Name = "RuntimeOverlayFloating"
     floatingButton.Parent = hudGui
     floatingButton.AnchorPoint = Vector2.new(0.5, 0.5)
+    if not hasCustomFloatingPosition then
+        setDefaultFloatingPosition()
+    end
     floatingButton.Position = floatingPosition
     floatingButton.Size = UDim2.fromOffset(76, 76)
     floatingButton.AutoButtonColor = true
@@ -597,6 +616,10 @@ function HudSystem.start()
     if hudGui then
         hudGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             if floatingButton and floatingButton.Visible then
+                if not hasCustomFloatingPosition then
+                    setDefaultFloatingPosition()
+                    floatingButton.Position = floatingPosition
+                end
                 clampFloatingToViewport()
             end
         end)
