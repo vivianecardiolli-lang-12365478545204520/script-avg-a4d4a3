@@ -10,11 +10,11 @@ local LobbyPipeline = {}
 
 local function step(statusText, fn)
     StatusBus.set(statusText)
-    StatusBus.setDetail("Iniciando etapa")
+    StatusBus.setDetail("Lobby | Pipeline | iniciando " .. tostring(statusText))
     Logger.log(statusText)
     if fn then
         local result = fn()
-        StatusBus.setDetail("Etapa concluida")
+        StatusBus.setDetail("Lobby | Pipeline | concluido " .. tostring(statusText))
         return result
     end
     return nil

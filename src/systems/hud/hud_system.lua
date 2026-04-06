@@ -12,6 +12,7 @@ local EMOJI_LEVEL = utf8.char(0x2B50)
 local EMOJI_TRAITS = utf8.char(0x1F52E)
 local EMOJI_STATUS = utf8.char(0x1F4CC)
 local EMOJI_FLOATING = utf8.char(0x26A1)
+local EMOJI_DETAIL = utf8.char(0x1F4DD)
 
 local ROOT_NAME = "RuntimeOverlayRoot"
 local GUI_NAME = "RuntimeOverlayGui"
@@ -217,7 +218,7 @@ local function setDetailText(detailText)
         if detail == "" then
             detail = "-"
         end
-        detailLabel.Text = "Detalhe: " .. detail
+        detailLabel.Text = string.format("%s Detalhes: %s", EMOJI_DETAIL, detail)
     end
 end
 
@@ -546,7 +547,7 @@ local function buildHud()
     levelLabel = makeValueLabel("RuntimeOverlayStatsLevel", string.format("%s Level: 0", EMOJI_LEVEL), contentFrame)
     traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), contentFrame)
     statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), contentFrame)
-    detailLabel = makeValueLabel("RuntimeOverlayDetail", "Detalhe: -", contentFrame)
+    detailLabel = makeValueLabel("RuntimeOverlayDetail", string.format("%s Detalhes: -", EMOJI_DETAIL), contentFrame)
 
     closeButton.Activated:Connect(function()
         closeMenu()

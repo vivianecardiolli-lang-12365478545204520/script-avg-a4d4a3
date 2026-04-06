@@ -36,7 +36,7 @@ local function devAlertOnce(key, message)
 end
 
 local function setPlayDetail(message)
-    StatusBus.setDetail("Partida: " .. tostring(message))
+    StatusBus.setDetail("Partida | AutoPlay custom | " .. tostring(message))
 end
 
 local function getNativeRequire()
@@ -311,7 +311,7 @@ local function generateSequence(settings)
         table.insert(seq, "#" .. tostring(item.idOriginal))
     end
     Logger.log("[CustomPlay] Nova sequencia Fisher-Yates: [ " .. table.concat(seq, " ") .. " ]")
-    setPlayDetail("Nova sequencia de posicionamento gerada")
+    setPlayDetail("nova sequencia de posicionamento gerada")
 end
 
 local function ensureAutoUpgrade(settings, deps, net)
@@ -349,7 +349,7 @@ local function ensureAutoUpgrade(settings, deps, net)
     for guid, data in pairs(activeUnits) do
         if type(data) == "table" and data.Name == unitName and not upgradedUnits[guid] then
             Logger.log("[CustomPlay] Ativando Auto-Upgrade para " .. tostring(data.Name))
-            setPlayDetail("Ativando auto-upgrade de " .. tostring(data.Name))
+            setPlayDetail("ativando auto-upgrade de " .. tostring(data.Name))
             local okToggle, toggleErr = pcall(function()
                 net.AutoUpgradeEvent:FireServer("Toggle", guid)
                 deps.AutoUpgradeData.AutoUpgradeToggled:Fire(guid, true)
@@ -415,7 +415,7 @@ local function tryPlacement(settings, deps, net)
     end
 
     Logger.log(string.format("[CustomPlay] Tentando posicao #%s (restantes apos sucesso: %s)", tostring(target.idOriginal), tostring(#runtime.queue - 1)))
-    setPlayDetail("Tentando posicionar unidade na referencia #" .. tostring(target.idOriginal))
+    setPlayDetail("tentando posicionar unidade na referencia #" .. tostring(target.idOriginal))
 
     local okDpsStop, errDpsStop = pcall(function()
         net.DPSEvent:FireServer("Stop")
@@ -476,7 +476,7 @@ local function tryPlacement(settings, deps, net)
     table.remove(runtime.queue, #runtime.queue)
     runtime.lastPlacementAt = tick()
     Logger.log("[CustomPlay] Sucesso no placement da referencia #" .. tostring(target.idOriginal))
-    setPlayDetail("Unidade posicionada na referencia #" .. tostring(target.idOriginal))
+    setPlayDetail("unidade posicionada na referencia #" .. tostring(target.idOriginal))
     return true
 end
 
@@ -487,7 +487,7 @@ local function startLoopIfNeeded()
     runtime.started = true
 
     Logger.log("[CustomPlay] Loop iniciado.")
-    setPlayDetail("Loop custom iniciado")
+    setPlayDetail("loop iniciado")
     generateSequence(getSettings())
 
     task.spawn(function()
@@ -499,7 +499,7 @@ local function startLoopIfNeeded()
                 local deps, net, depErr = resolveDependencies()
                 if depErr then
                     devAlertOnce("resolve_dependencies", depErr)
-                    setPlayDetail("Aguardando dependencias do custom play")
+                    setPlayDetail("aguardando dependencias de gameplay")
                     task.wait(2)
                 else
                     local okMain, errMain = pcall(function()
@@ -508,12 +508,12 @@ local function startLoopIfNeeded()
                     end)
                     if not okMain then
                         devAlertOnce("custom_loop_exception", "Excecao no loop custom: " .. tostring(errMain))
-                        setPlayDetail("Erro no loop custom")
+                        setPlayDetail("erro interno no loop")
                     end
                     task.wait(randomFloat(settings.loopDelayMinSeconds, settings.loopDelayMaxSeconds))
                 end
             else
-                setPlayDetail("Aguardando entrar em partida")
+                setPlayDetail("aguardando entrada em partida")
                 task.wait(1)
             end
         end

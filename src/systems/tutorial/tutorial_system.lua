@@ -189,7 +189,7 @@ local function forceSkip(part)
 
     firedParts[part] = true
     StatusBus.set("Pulando tutorial (" .. tostring(part) .. ")")
-    StatusBus.setDetail("Enviando skip para " .. tostring(part))
+    StatusBus.setDetail("Tutorial | Skip | enviando " .. tostring(part))
 
     Logger.log("[Tutorial] Tutorial detectado: " .. tostring(part))
     cleanupUI(part)
@@ -255,7 +255,7 @@ local function installEventHook()
 
         if type(part) == "string" and validParts[part] then
             Logger.log("[Tutorial DEBUG] Tentando pular: " .. tostring(part) .. " | Status: " .. tostring(status))
-            StatusBus.setDetail("Evento tutorial recebido: " .. tostring(part) .. " (" .. tostring(status) .. ")")
+            StatusBus.setDetail("Tutorial | Evento | parte=" .. tostring(part) .. " status=" .. tostring(status))
             task.wait(0.3)
             forceSkip(part)
         else
@@ -284,10 +284,10 @@ function TutorialSystem.run()
     local handled = initialCheck()
     if not handled then
         Logger.log("[Tutorial] Monitorando tutorial via event hook.")
-        StatusBus.setDetail("Aguardando eventos de tutorial para skip")
+        StatusBus.setDetail("Tutorial | Monitoramento | aguardando evento para skip")
     else
         Logger.log("[Tutorial] initialCheck executou skip com sucesso.")
-        StatusBus.setDetail("Skip de tutorial enviado com sucesso")
+        StatusBus.setDetail("Tutorial | Skip | enviado com sucesso")
     end
 
     return {

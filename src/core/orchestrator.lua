@@ -40,7 +40,7 @@ local function detectAndRun()
     end
 
     StatusBus.setDetail(string.format(
-        "Local=%s | Tutorial=%s | Motivo=%s",
+        "Estado | Detectado | local=%s tutorial=%s motivo=%s",
         tostring(state.location),
         tostring(state.tutorialVisible),
         tostring(state.reason)
@@ -62,7 +62,7 @@ local function detectAndRun()
     if state.location == "lobby" then
         if config.automation.runLobbyPipelineOncePerSession and context.didInitialLobbyPipeline then
             StatusBus.set("Lobby pronto (aguardando proxima etapa)")
-            StatusBus.setDetail("Pipeline de lobby ja executado nesta sessao")
+            StatusBus.setDetail("Lobby | Pipeline | ja executado nesta sessao")
             return
         end
 
@@ -86,7 +86,7 @@ local function detectAndRun()
     end
 
     StatusBus.set("Sincronizando estado")
-    StatusBus.setDetail("Aguardando identificacao de lobby/partida")
+    StatusBus.setDetail("Estado | Sincronizacao | aguardando lobby ou partida")
     local now = os.clock()
     if now - lastUnknownRecoveryAt >= UNKNOWN_RECOVERY_COOLDOWN_SECONDS then
         lastUnknownRecoveryAt = now
@@ -131,7 +131,7 @@ function Orchestrator.run()
 
     HudSystem.start()
     StatusBus.set("Inicializando")
-    StatusBus.setDetail("Boot do orquestrador concluido")
+    StatusBus.setDetail("Sistema | Orquestrador | inicializacao concluida")
     Logger.log("Orchestrator started")
 
     local tickSeconds = tonumber(config.automation.tickSeconds) or 2

@@ -37,7 +37,7 @@ local function rewardLog(message)
 end
 
 local function rewardDetail(message)
-    StatusBus.setDetail("Rewards: " .. tostring(message))
+    StatusBus.setDetail("Rewards | Module | " .. tostring(message))
 end
 
 local function getNativeRequire()
@@ -261,7 +261,7 @@ local function processDaily(settings, context)
     if not settings.enabledDailySpecial and not settings.enabledDailyWinter then
         return
     end
-    rewardDetail("Processando Daily")
+    rewardDetail("processando Daily")
 
     local dailyEvent = context.networking:FindFirstChild("DailyRewardEvent")
     if not dailyEvent then
@@ -302,7 +302,7 @@ local function processDaily(settings, context)
 
     rewardLog("[Daily] " .. tostring(#queue) .. " itens encontrados.")
     for _, item in ipairs(shuffleArray(queue)) do
-        rewardDetail("Daily " .. tostring(item.rewardType) .. " dia " .. tostring(item.day))
+        rewardDetail("Daily -> tipo=" .. tostring(item.rewardType) .. " dia=" .. tostring(item.day))
         waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
         local ok, err = pcall(function()
             dailyEvent:FireServer("Claim", { item.rewardType, item.day })
@@ -319,7 +319,7 @@ local function processNewPlayer(settings, context)
     if not settings.enabledNewPlayer then
         return
     end
-    rewardDetail("Processando NewPlayer")
+    rewardDetail("processando NewPlayer")
 
     local remote = context.networking:FindFirstChild("NewPlayerRewardsEvent")
     if not remote then
@@ -352,7 +352,7 @@ local function processNewPlayer(settings, context)
 
     rewardLog("[NewPlayer] " .. tostring(#queue) .. " itens encontrados.")
     for _, day in ipairs(shuffleArray(queue)) do
-        rewardDetail("NewPlayer dia " .. tostring(day))
+        rewardDetail("NewPlayer -> dia=" .. tostring(day))
         waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
         local ok, err = pcall(function()
             remote:FireServer("Claim", day)
@@ -369,7 +369,7 @@ local function processPirates(settings, context)
     if not settings.enabledPirate then
         return
     end
-    rewardDetail("Processando Pirates")
+    rewardDetail("processando Pirates")
 
     local remote = context.networking:FindFirstChild("APiratesWelcomeEvent")
     if not remote then
@@ -402,7 +402,7 @@ local function processPirates(settings, context)
 
     rewardLog("[Pirates] " .. tostring(#queue) .. " itens encontrados.")
     for _, day in ipairs(shuffleArray(queue)) do
-        rewardDetail("Pirates dia " .. tostring(day))
+        rewardDetail("Pirates -> dia=" .. tostring(day))
         waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
         local ok, err = pcall(function()
             remote:FireServer("Claim", day)
@@ -419,7 +419,7 @@ local function processMilestones(settings, context)
     if not settings.enabledLevelMilestones and not settings.enabledCollectionMilestones then
         return
     end
-    rewardDetail("Processando Milestones")
+    rewardDetail("processando Milestones")
 
     local milestonesFolder = context.networking:FindFirstChild("Milestones")
     local levelRemote = milestonesFolder and milestonesFolder:FindFirstChild("MilestonesEvent")
@@ -477,7 +477,7 @@ local function processMilestones(settings, context)
     rewardLog("[Milestones] " .. tostring(#queue) .. " itens encontrados.")
     local unpackFn = table.unpack or unpack
     for _, item in ipairs(shuffleArray(queue)) do
-        rewardDetail("Milestone " .. tostring(item.rewardType) .. " -> " .. tostring(item.rewardId))
+        rewardDetail("Milestone -> tipo=" .. tostring(item.rewardType) .. " id=" .. tostring(item.rewardId))
         waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
         local ok, err = pcall(function()
             item.remote:FireServer(unpackFn(item.args))
@@ -497,7 +497,7 @@ local function processBattlePass(settings, context)
     if not settings.enabledBattlePass then
         return
     end
-    rewardDetail("Processando BattlePass")
+    rewardDetail("processando BattlePass")
 
     local battleEvent = context.networking:FindFirstChild("BattlepassEvent")
     if not battleEvent then
@@ -535,7 +535,7 @@ local function processBattlePass(settings, context)
     end
 
     waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
-    rewardDetail("BattlePass ClaimAll")
+    rewardDetail("BattlePass -> enviando ClaimAll")
     local ok, err = pcall(function()
         battleEvent:FireServer("ClaimAll")
     end)
@@ -550,7 +550,7 @@ local function processQuests(settings, context)
     if not settings.enabledQuests then
         return
     end
-    rewardDetail("Processando Quests")
+    rewardDetail("processando Quests")
 
     local questDataHandler = safeNativeRequire(context.nativeRequire, context.modules.questDataHandler, "QuestDataHandler")
     if not questDataHandler then
@@ -583,7 +583,7 @@ local function processQuests(settings, context)
     end
 
     waitRandom(settings.delayBetweenClaimsMinSeconds, settings.delayBetweenClaimsMaxSeconds)
-    rewardDetail("Quests ClaimAll")
+    rewardDetail("Quests -> enviando ClaimAll")
     local ok, err = pcall(function()
         claimQuest:FireServer("ClaimAll")
     end)
@@ -667,7 +667,7 @@ function RewardModuleSystem.run()
     validateCriticalModules(modules)
 
     rewardLog("Sincronizando dados de rewards via remotes...")
-    rewardDetail("Sincronizando dados")
+    rewardDetail("sincronizando dados via remotes")
     fireSyncRequests(networking)
     task.wait(settings.syncWaitSeconds)
 
@@ -688,7 +688,7 @@ function RewardModuleSystem.run()
     shuffleArray(processors)
 
     for i, processor in ipairs(processors) do
-        rewardDetail("Executando modulo: " .. tostring(processor.name))
+        rewardDetail("executando modulo " .. tostring(processor.name))
         local ok, err = pcall(processor.fn)
         if not ok then
             devAlertOnce("processor_" .. tostring(processor.name), "Falha no modulo de rewards '" .. tostring(processor.name) .. "': " .. tostring(err))
@@ -699,7 +699,7 @@ function RewardModuleSystem.run()
     end
 
     rewardLog("Ciclo de rewards (module mode) finalizado.")
-    rewardDetail("Ciclo finalizado")
+    rewardDetail("ciclo finalizado")
 end
 
 return RewardModuleSystem

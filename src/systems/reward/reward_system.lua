@@ -14,14 +14,14 @@ function RewardSystem.run()
 
     if normalizedMode == "module" then
         Logger.log("RewardSystem mode=module")
-        StatusBus.setDetail("Rewards em modo module")
+        StatusBus.setDetail("Rewards | Dispatcher | modo module")
         ModuleRewardSystem.run()
         return
     end
 
     if normalizedMode == "legacy_ui" then
         Logger.log("RewardSystem mode=legacy_ui")
-        StatusBus.setDetail("Rewards em modo legacy_ui")
+        StatusBus.setDetail("Rewards | Dispatcher | modo legacy_ui")
         LegacyUiRewardSystem.run()
         return
     end
@@ -32,7 +32,7 @@ function RewardSystem.run()
         warn(message)
         Logger.log(message)
     end
-    StatusBus.setDetail("claimMode invalido: " .. tostring(mode))
+    StatusBus.setDetail("Rewards | Configuracao | claimMode invalido: " .. tostring(mode))
 end
 
 return RewardSystem

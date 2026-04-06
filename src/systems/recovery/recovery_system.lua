@@ -5,7 +5,7 @@ local RecoverySystem = {}
 
 function RecoverySystem.run(reason)
     StatusBus.set("Recovery")
-    StatusBus.setDetail("Motivo: " .. tostring(reason or "unknown"))
+    StatusBus.setDetail("Recovery | Acao | motivo=" .. tostring(reason or "unknown"))
     Logger.log("Recovery invoked: " .. tostring(reason or "unknown"))
     task.wait(0.25)
     return {
