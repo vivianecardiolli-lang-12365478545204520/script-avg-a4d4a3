@@ -24,6 +24,7 @@ local isMenuVisible = true
 local floatingPosition = UDim2.new(0.5, 0, 0, 26)
 local floatingWasDragged = false
 local lastDragEndedAt = 0
+local suppressNextOpenFromDrag = false
 local dragState = {
     dragging = false,
     dragStart = nil,
@@ -104,17 +105,22 @@ local function makeValueLabel(name, text, parent)
     label.Name = name
     label.Parent = parent
     label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, 0, 0, 0)
-    label.AutomaticSize = Enum.AutomaticSize.Y
+    label.Size = UDim2.new(1, 0, 0, 86)
     label.Font = Enum.Font.GothamBold
-    label.TextScaled = true
+    label.TextScaled = false
     label.TextSize = 56
-    label.TextWrapped = true
+    label.TextWrapped = false
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.TextColor3 = Color3.fromRGB(240, 240, 240)
     label.Text = text
     label.ZIndex = 10001
+
+    local textConstraint = Instance.new("UITextSizeConstraint")
+    textConstraint.MinTextSize = 34
+    textConstraint.MaxTextSize = 64
+    textConstraint.Parent = label
+
     return label
 end
 
@@ -200,15 +206,16 @@ local function bindFloatingDrag()
             end
             if floatingWasDragged then
                 lastDragEndedAt = os.clock()
+                suppressNextOpenFromDrag = true
+            else
+                suppressNextOpenFromDrag = false
             end
         end
     end)
 
     floatingButton.Activated:Connect(function()
-        if dragState.dragging then
-            return
-        end
-        if os.clock() - lastDragEndedAt < 0.2 then
+        if suppressNextOpenFromDrag and os.clock() - lastDragEndedAt < 0.25 then
+            suppressNextOpenFromDrag = false
             return
         end
         openMenu()
@@ -282,7 +289,7 @@ local function buildHud()
     closeButton.AnchorPoint = Vector2.new(1, 0)
     closeButton.Position = UDim2.new(1, -18, 0, 14)
     closeButton.Size = UDim2.fromOffset(56, 56)
-    closeButton.AutoButtonColor = true
+    closeButton.AutoButtonColor = false
     closeButton.BackgroundColor3 = Color3.fromRGB(45, 50, 65)
     closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     closeButton.Font = Enum.Font.GothamBold
@@ -330,6 +337,8 @@ local function buildHud()
     floatingButton.Position = floatingPosition
     floatingButton.Size = UDim2.fromOffset(76, 76)
     floatingButton.AutoButtonColor = true
+    floatingButton.Active = true
+    floatingButton.Selectable = true
     floatingButton.BackgroundColor3 = Color3.fromRGB(28, 34, 46)
     floatingButton.TextColor3 = Color3.fromRGB(245, 245, 245)
     floatingButton.Font = Enum.Font.GothamBlack
