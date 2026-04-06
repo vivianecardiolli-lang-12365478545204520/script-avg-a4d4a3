@@ -97,40 +97,40 @@ local function attachDiagnostics()
     diagnostics.lastValueByKey = {}
     diagLog("boot", "Diagnostico de HUD ativado.")
 
-    watchProperty(panel, "Panel", "Size", udim2ToString)
-    watchProperty(panel, "Panel", "Position", udim2ToString)
-    watchProperty(panel, "Panel", "BackgroundTransparency", tostring)
-    watchProperty(panel, "Panel", "BackgroundColor3", colorToString)
-    watchProperty(panel, "Panel", "Visible", tostring)
+    watchProperty(panel, "RuntimeOverlayRoot", "Size", udim2ToString)
+    watchProperty(panel, "RuntimeOverlayRoot", "Position", udim2ToString)
+    watchProperty(panel, "RuntimeOverlayRoot", "BackgroundTransparency", tostring)
+    watchProperty(panel, "RuntimeOverlayRoot", "BackgroundColor3", colorToString)
+    watchProperty(panel, "RuntimeOverlayRoot", "Visible", tostring)
 
-    watchProperty(closeButton, "CloseButton", "AutoButtonColor", tostring)
-    watchProperty(closeButton, "CloseButton", "BackgroundTransparency", tostring)
-    watchProperty(closeButton, "CloseButton", "BackgroundColor3", colorToString)
-    watchProperty(closeButton, "CloseButton", "Size", udim2ToString)
+    watchProperty(closeButton, "RuntimeOverlayClose", "AutoButtonColor", tostring)
+    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundTransparency", tostring)
+    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundColor3", colorToString)
+    watchProperty(closeButton, "RuntimeOverlayClose", "Size", udim2ToString)
 
-    watchProperty(floatingButton, "FloatingButton", "Visible", tostring)
-    watchProperty(floatingButton, "FloatingButton", "Position", udim2ToString)
+    watchProperty(floatingButton, "RuntimeOverlayFloating", "Visible", tostring)
+    watchProperty(floatingButton, "RuntimeOverlayFloating", "Position", udim2ToString)
 
     panel.ChildAdded:Connect(function(child)
-        diagLog("panel.child_added", "Panel.ChildAdded -> " .. child.ClassName .. " (" .. child.Name .. ")")
+        diagLog("panel.child_added", "RuntimeOverlayRoot.ChildAdded -> " .. child.ClassName .. " (" .. child.Name .. ")")
     end)
     panel.DescendantAdded:Connect(function(desc)
         if desc:IsA("UIScale") or desc:IsA("UIPadding") or desc:IsA("UIAspectRatioConstraint") then
-            diagLog("panel.desc_added", "Panel.DescendantAdded -> " .. desc.ClassName .. " (" .. desc.Name .. ")")
+            diagLog("panel.desc_added", "RuntimeOverlayRoot.DescendantAdded -> " .. desc.ClassName .. " (" .. desc.Name .. ")")
         end
     end)
 
     closeButton.MouseEnter:Connect(function()
-        diagLog("close.hover.enter", "CloseButton.MouseEnter")
+        diagLog("close.hover.enter", "RuntimeOverlayClose.MouseEnter")
     end)
     closeButton.MouseLeave:Connect(function()
-        diagLog("close.hover.leave", "CloseButton.MouseLeave")
+        diagLog("close.hover.leave", "RuntimeOverlayClose.MouseLeave")
     end)
     panel.MouseEnter:Connect(function()
-        diagLog("panel.hover.enter", "Panel.MouseEnter")
+        diagLog("panel.hover.enter", "RuntimeOverlayRoot.MouseEnter")
     end)
     panel.MouseLeave:Connect(function()
-        diagLog("panel.hover.leave", "Panel.MouseLeave")
+        diagLog("panel.hover.leave", "RuntimeOverlayRoot.MouseLeave")
     end)
 end
 
@@ -349,13 +349,13 @@ local function buildHud()
         return
     end
 
-    local existing = playerGui:FindFirstChild("KaitunHUD")
+    local existing = playerGui:FindFirstChild("RuntimeOverlayGui")
     if existing and existing:IsA("ScreenGui") then
         existing:Destroy()
     end
 
     hudGui = Instance.new("ScreenGui")
-    hudGui.Name = "KaitunHUD"
+    hudGui.Name = "RuntimeOverlayGui"
     hudGui.ResetOnSpawn = false
     hudGui.DisplayOrder = 999999
     hudGui.IgnoreGuiInset = true
@@ -363,7 +363,7 @@ local function buildHud()
     hudGui.Parent = playerGui
 
     panel = Instance.new("Frame")
-    panel.Name = "Panel"
+    panel.Name = "RuntimeOverlayRoot"
     panel.Parent = hudGui
     panel.AnchorPoint = Vector2.new(0.5, 0.5)
     panel.Position = UDim2.fromScale(0.5, 0.5)
@@ -387,7 +387,7 @@ local function buildHud()
     stroke.Parent = panel
 
     closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseButton"
+    closeButton.Name = "RuntimeOverlayClose"
     closeButton.Parent = panel
     closeButton.AnchorPoint = Vector2.new(1, 0)
     closeButton.Position = UDim2.new(1, -18, 0, 14)
@@ -410,7 +410,7 @@ local function buildHud()
     closeStroke.Parent = closeButton
 
     local content = Instance.new("Frame")
-    content.Name = "Content"
+    content.Name = "RuntimeOverlayContent"
     content.Parent = panel
     content.BackgroundTransparency = 1
     content.Position = UDim2.new(0, 28, 0, 84)
@@ -424,17 +424,17 @@ local function buildHud()
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
     layout.Padding = UDim.new(0, 16)
 
-    gemsLabel = makeValueLabel("Gems", string.format("%s Gemas: 0", EMOJI_GEMS), content)
-    levelLabel = makeValueLabel("Level", string.format("%s Level: 0", EMOJI_LEVEL), content)
-    traitsLabel = makeValueLabel("Traits", string.format("%s Traits: 0", EMOJI_TRAITS), content)
-    statusLabel = makeValueLabel("Status", string.format("%s Status: Idle", EMOJI_STATUS), content)
+    gemsLabel = makeValueLabel("RuntimeOverlayStatsGems", string.format("%s Gemas: 0", EMOJI_GEMS), content)
+    levelLabel = makeValueLabel("RuntimeOverlayStatsLevel", string.format("%s Level: 0", EMOJI_LEVEL), content)
+    traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), content)
+    statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), content)
 
     closeButton.Activated:Connect(function()
         closeMenu()
     end)
 
     floatingButton = Instance.new("TextButton")
-    floatingButton.Name = "FloatingOpenButton"
+    floatingButton.Name = "RuntimeOverlayFloating"
     floatingButton.Parent = hudGui
     floatingButton.AnchorPoint = Vector2.new(0.5, 0.5)
     floatingButton.Position = floatingPosition
