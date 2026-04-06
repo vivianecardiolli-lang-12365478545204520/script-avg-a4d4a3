@@ -1,10 +1,16 @@
-local Players = game:GetService("Players")
+﻿local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local config = require("core.config")
 local StatusBus = require("core.status_bus")
 
 local HudSystem = {}
+
+local EMOJI_GEMS = utf8.char(0x1F48E)
+local EMOJI_LEVEL = utf8.char(0x2B50)
+local EMOJI_TRAITS = utf8.char(0x1F52E)
+local EMOJI_STATUS = utf8.char(0x1F4CC)
+local EMOJI_FLOATING = utf8.char(0x26A1)
 
 local hudGui
 local panel
@@ -17,6 +23,7 @@ local traitsLabel
 local isMenuVisible = true
 local floatingPosition = UDim2.new(0.5, 0, 0, 26)
 local floatingWasDragged = false
+local lastDragEndedAt = 0
 local dragState = {
     dragging = false,
     dragStart = nil,
@@ -100,8 +107,8 @@ local function makeValueLabel(name, text, parent)
     label.Size = UDim2.new(1, 0, 0, 0)
     label.AutomaticSize = Enum.AutomaticSize.Y
     label.Font = Enum.Font.GothamBold
-    label.TextScaled = false
-    label.TextSize = 40
+    label.TextScaled = true
+    label.TextSize = 56
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
@@ -113,19 +120,19 @@ end
 
 local function setStatusText(statusText)
     if statusLabel then
-        statusLabel.Text = string.format("Status: %s", tostring(statusText))
+        statusLabel.Text = string.format("%s Status: %s", EMOJI_STATUS, tostring(statusText))
     end
 end
 
 local function refreshValues()
     if gemsLabel then
-        gemsLabel.Text = "Gemas: " .. readAttribute("Gems")
+        gemsLabel.Text = string.format("%s Gemas: %s", EMOJI_GEMS, readAttribute("Gems"))
     end
     if levelLabel then
-        levelLabel.Text = "Level: " .. readAttribute("Level")
+        levelLabel.Text = string.format("%s Level: %s", EMOJI_LEVEL, readAttribute("Level"))
     end
     if traitsLabel then
-        traitsLabel.Text = "Traits: " .. readAttribute("TraitRerolls")
+        traitsLabel.Text = string.format("%s Traits: %s", EMOJI_TRAITS, readAttribute("TraitRerolls"))
     end
 end
 
@@ -191,11 +198,17 @@ local function bindFloatingDrag()
             if floatingButton then
                 floatingPosition = floatingButton.Position
             end
+            if floatingWasDragged then
+                lastDragEndedAt = os.clock()
+            end
         end
     end)
 
     floatingButton.Activated:Connect(function()
-        if dragState.dragging or floatingWasDragged then
+        if dragState.dragging then
+            return
+        end
+        if os.clock() - lastDragEndedAt < 0.2 then
             return
         end
         openMenu()
@@ -301,10 +314,10 @@ local function buildHud()
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
     layout.Padding = UDim.new(0, 16)
 
-    gemsLabel = makeValueLabel("Gems", "Gemas: 0", content)
-    levelLabel = makeValueLabel("Level", "Level: 0", content)
-    traitsLabel = makeValueLabel("Traits", "Traits: 0", content)
-    statusLabel = makeValueLabel("Status", "Status: Idle", content)
+    gemsLabel = makeValueLabel("Gems", string.format("%s Gemas: 0", EMOJI_GEMS), content)
+    levelLabel = makeValueLabel("Level", string.format("%s Level: 0", EMOJI_LEVEL), content)
+    traitsLabel = makeValueLabel("Traits", string.format("%s Traits: 0", EMOJI_TRAITS), content)
+    statusLabel = makeValueLabel("Status", string.format("%s Status: Idle", EMOJI_STATUS), content)
 
     closeButton.Activated:Connect(function()
         closeMenu()
@@ -321,7 +334,7 @@ local function buildHud()
     floatingButton.TextColor3 = Color3.fromRGB(245, 245, 245)
     floatingButton.Font = Enum.Font.GothamBlack
     floatingButton.TextSize = 38
-    floatingButton.Text = "⚡"
+    floatingButton.Text = EMOJI_FLOATING
     floatingButton.ZIndex = 10004
     floatingButton.Visible = false
 
