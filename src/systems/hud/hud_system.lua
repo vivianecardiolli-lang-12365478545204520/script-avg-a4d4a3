@@ -169,9 +169,6 @@ local function updateTextSizing()
 
     local h = rootFrame.AbsoluteSize.Y
     local baseSize = math.floor(math.clamp(h * 0.09, 40, 86))
-    local statusSize = math.floor(math.clamp(baseSize * 0.92, 36, 80))
-    local detailSize = math.floor(math.clamp(baseSize * 0.70, 26, 62))
-
     if gemsLabel then
         gemsLabel.TextSize = baseSize
     end
@@ -182,10 +179,10 @@ local function updateTextSizing()
         traitsLabel.TextSize = baseSize
     end
     if statusLabel then
-        statusLabel.TextSize = statusSize
+        statusLabel.TextSize = baseSize
     end
     if detailLabel then
-        detailLabel.TextSize = detailSize
+        detailLabel.TextSize = baseSize
     end
 end
 
@@ -548,6 +545,11 @@ local function buildHud()
     traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), contentFrame)
     statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), contentFrame)
     detailLabel = makeValueLabel("RuntimeOverlayDetail", string.format("%s Detalhes: -", EMOJI_DETAIL), contentFrame)
+    gemsLabel.LayoutOrder = 1
+    levelLabel.LayoutOrder = 2
+    traitsLabel.LayoutOrder = 3
+    statusLabel.LayoutOrder = 4
+    detailLabel.LayoutOrder = 5
 
     closeButton.Activated:Connect(function()
         closeMenu()

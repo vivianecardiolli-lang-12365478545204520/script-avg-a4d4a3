@@ -61,6 +61,7 @@ local automationOverrides = runtimeConfig.automation or {}
 local antiAfkOverrides = automationOverrides.antiAfk or {}
 local customPlayOverrides = automationOverrides.customPlay or {}
 local lobbyUiGuardOverrides = automationOverrides.lobbyUiGuard or {}
+local preAutoplayPositioningOverrides = automationOverrides.preAutoplayPositioning or {}
 config.automation = {
     enabled = pick(automationOverrides.enabled, true),
     tickSeconds = pick(automationOverrides.tickSeconds, 2),
@@ -121,6 +122,11 @@ config.automation = {
         closeLogCooldownSeconds = pick(lobbyUiGuardOverrides.closeLogCooldownSeconds, 15),
         enableUpdateLogOptOut = pick(lobbyUiGuardOverrides.enableUpdateLogOptOut, true),
         suppressDuringLegacyRewardClaim = pick(lobbyUiGuardOverrides.suppressDuringLegacyRewardClaim, true),
+    },
+    preAutoplayPositioning = {
+        enabled = pick(preAutoplayPositioningOverrides.enabled, true),
+        moveTimeoutSeconds = pick(preAutoplayPositioningOverrides.moveTimeoutSeconds, 12),
+        arrivalRadius = pick(preAutoplayPositioningOverrides.arrivalRadius, 6),
     },
 }
 

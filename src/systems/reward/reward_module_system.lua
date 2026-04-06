@@ -37,7 +37,7 @@ local function rewardLog(message)
 end
 
 local function rewardDetail(message)
-    StatusBus.setDetail("Rewards | Module | " .. tostring(message))
+    StatusBus.setDetail("Rewards | Execucao | " .. tostring(message))
 end
 
 local function getNativeRequire()
@@ -688,7 +688,7 @@ function RewardModuleSystem.run()
     shuffleArray(processors)
 
     for i, processor in ipairs(processors) do
-        rewardDetail("executando modulo " .. tostring(processor.name))
+        rewardDetail("executando etapa " .. tostring(processor.name))
         local ok, err = pcall(processor.fn)
         if not ok then
             devAlertOnce("processor_" .. tostring(processor.name), "Falha no modulo de rewards '" .. tostring(processor.name) .. "': " .. tostring(err))

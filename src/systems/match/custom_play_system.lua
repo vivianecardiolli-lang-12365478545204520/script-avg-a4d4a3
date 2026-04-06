@@ -365,6 +365,7 @@ end
 
 local function tryPlacement(settings, deps, net)
     if tick() - runtime.lastPlacementAt < settings.placementCooldownSeconds then
+        setPlayDetail("aguardando cooldown de nova acao")
         return false
     end
 
@@ -372,10 +373,12 @@ local function tryPlacement(settings, deps, net)
     local okInfo, infoUnit = pcall(deps.UnitsData.GetUnitByName, deps.UnitsData, unitName)
     if not okInfo then
         devAlertOnce("unit_info_placement_read", "Falha ao consultar unidade para placement: " .. tostring(infoUnit))
+        setPlayDetail("falha ao consultar dados da unidade")
         return false
     end
     if not infoUnit then
         devAlertOnce("unit_missing_placement", "UnitsData:GetUnitByName retornou nil para " .. tostring(unitName))
+        setPlayDetail("dados da unidade indisponiveis")
         return false
     end
 
@@ -388,20 +391,24 @@ local function tryPlacement(settings, deps, net)
     end
 
     if currentPlacements >= maxPlacements then
+        setPlayDetail("limite de unidades em campo atingido")
         return false
     end
 
     local okYen, currentYen = pcall(deps.YenHandler.GetYen)
     if not okYen then
         devAlertOnce("yen_read_failed", "Falha ao ler YenHandler.GetYen: " .. tostring(currentYen))
+        setPlayDetail("falha ao consultar recurso da partida")
         return false
     end
     if tonumber(currentYen) == nil then
         devAlertOnce("yen_invalid", "YenHandler.GetYen nao retornou numero")
+        setPlayDetail("valor de recurso invalido")
         return false
     end
 
     if currentYen < (infoUnit.Price or 0) then
+        setPlayDetail("aguardando recurso suficiente para posicionar")
         return false
     end
 
@@ -411,6 +418,7 @@ local function tryPlacement(settings, deps, net)
 
     local target = runtime.queue[#runtime.queue]
     if not target then
+        setPlayDetail("recalculando sequencia de posicionamento")
         return false
     end
 
@@ -422,6 +430,7 @@ local function tryPlacement(settings, deps, net)
     end)
     if not okDpsStop then
         devAlertOnce("dps_stop_failed", "Falha ao sinalizar DPS Stop: " .. tostring(errDpsStop))
+        setPlayDetail("falha ao preparar sinal de posicionamento")
         return false
     end
 
@@ -432,12 +441,14 @@ local function tryPlacement(settings, deps, net)
     end)
     if not okDpsRetrieve then
         devAlertOnce("dps_retrieve_failed", "Falha ao sinalizar DPS Retrieve: " .. tostring(errDpsRetrieve))
+        setPlayDetail("falha ao concluir sinal de posicionamento")
         return false
     end
 
     local positionFinal = nil
     local activeUnits = getActiveUnits(deps)
     if not activeUnits then
+        setPlayDetail("unidades ativas indisponiveis no cliente")
         return false
     end
 
@@ -460,6 +471,7 @@ local function tryPlacement(settings, deps, net)
     end
 
     if not positionFinal then
+        setPlayDetail("nenhuma posicao valida encontrada no momento")
         return false
     end
 
@@ -470,6 +482,7 @@ local function tryPlacement(settings, deps, net)
     end)
     if not okPlace then
         devAlertOnce("unit_render_failed", "Falha no UnitEvent:FireServer(Render): " .. tostring(placeErr))
+        setPlayDetail("falha ao enviar posicionamento")
         return false
     end
 

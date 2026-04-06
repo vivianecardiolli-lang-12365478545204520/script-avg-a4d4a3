@@ -3,6 +3,7 @@ local StarterPlayer = game:GetService("StarterPlayer")
 
 local Logger = require("core.logger")
 local StatusBus = require("core.status_bus")
+local StateContext = require("core.state_context")
 
 local TutorialSystem = {}
 
@@ -26,6 +27,7 @@ local resolved = {
 }
 
 local warned = {}
+local POST_MATCH_SKIP_BLOCK_SECONDS = 60
 
 local function devAlertOnce(key, message)
     if warned[key] then
@@ -200,6 +202,14 @@ local function forceSkip(part)
     if not ok then
         devAlertOnce("skip_fire_" .. tostring(part), "Falha ao enviar skip para " .. tostring(part) .. ": " .. tostring(err))
         return false
+    end
+
+    if part == "PartOne" then
+        StateContext.blockMatchAutomationFor(POST_MATCH_SKIP_BLOCK_SECONDS, "tutorial_skip_remote")
+        Logger.log(string.format(
+            "[Tutorial] Bloqueio de autoplay aplicado por %ss apos skip remoto de PartOne.",
+            tostring(POST_MATCH_SKIP_BLOCK_SECONDS)
+        ))
     end
 
     Logger.log("[Kaitun] Skip enviado para " .. tostring(part))

@@ -103,7 +103,7 @@ function AutoPlaySystem.run()
 
     if not isPlaying then
         Logger.log("[AutoPlay] Desativado. Enviando Toggle.")
-        StatusBus.setDetail("Partida | AutoPlay nativo | desativado, enviando toggle")
+        StatusBus.setDetail("Partida | AutoPlay nativo | desativado, enviando ativacao")
         event:FireServer("Toggle")
         return { ok = true, toggled = true }
     end
