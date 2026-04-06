@@ -6,6 +6,7 @@ local StatusBus = require("core.status_bus")
 local StateContext = require("core.state_context")
 
 local TutorialSystem = {}
+local rng = Random.new()
 
 -- Controle por sessao: evita reenviar skip para a mesma parte.
 local firedParts = {}
@@ -195,6 +196,7 @@ local function forceSkip(part)
 
     Logger.log("[Tutorial] Tutorial detectado: " .. tostring(part))
     cleanupUI(part)
+    task.wait(rng:NextNumber(0.12, 0.28))
 
     local ok, err = pcall(function()
         resolved.remote:FireServer(part, "Skip")

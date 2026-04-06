@@ -6,8 +6,8 @@ local config = require("core.config")
 
 local UnitEquipSystem = {}
 local rng = Random.new()
-local REMOVE_TO_EQUIP_MIN_DELAY = 0.06
-local REMOVE_TO_EQUIP_MAX_DELAY = 0.18
+local REMOVE_TO_EQUIP_MIN_DELAY = 0.14
+local REMOVE_TO_EQUIP_MAX_DELAY = 0.32
 
 local function devAlert(message)
     local full = "[KAITUN] ATENCAO DESENVOLVEDOR (UnitEquip): " .. tostring(message)

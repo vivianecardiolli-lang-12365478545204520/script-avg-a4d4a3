@@ -7,6 +7,11 @@ local Logger = require("core.logger")
 local StatusBus = require("core.status_bus")
 
 local LobbyPipeline = {}
+local rng = Random.new()
+
+local function pauseBetweenSteps()
+    task.wait(rng:NextNumber(0.12, 0.30))
+end
 
 local function step(statusText, fn)
     StatusBus.set(statusText)
@@ -25,6 +30,7 @@ function LobbyPipeline.run()
         RewardSystem.run()
         Tracker.sendNow()
     end)
+    pauseBetweenSteps()
 
     local equipResult = step("Equipando unidade", function()
         local result = UnitEquipSystem.run()
@@ -40,6 +46,7 @@ function LobbyPipeline.run()
             reason = "unit_equip_failed",
         }
     end
+    pauseBetweenSteps()
 
     local settingsResult = step("Configurando settings", function()
         local result = SettingsSystem.run()
@@ -51,6 +58,7 @@ function LobbyPipeline.run()
     if not settingsResult or not settingsResult.ok then
         Logger.log("Settings apply failed: seguindo para proximas etapas")
     end
+    pauseBetweenSteps()
 
     local matchCreateResult = step("Entrando na partida", function()
         local result = MatchCreateSystem.run()

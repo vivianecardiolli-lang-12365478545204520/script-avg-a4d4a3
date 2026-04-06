@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
+local PathfindingService = game:GetService("PathfindingService")
+local Workspace = game:GetService("Workspace")
 
 local config = require("core.config")
 local Logger = require("core.logger")
@@ -39,6 +41,9 @@ local function getSettings()
         jumpChancePercent = tonumber(settings.jumpChancePercent) or 40,
         maxJumpsPerMovement = tonumber(settings.maxJumpsPerMovement) or 2,
         moveToTimeoutSeconds = tonumber(settings.moveToTimeoutSeconds) or 25,
+        destinationValidationAttempts = tonumber(settings.destinationValidationAttempts) or 10,
+        destinationRaycastUp = tonumber(settings.destinationRaycastUp) or 20,
+        destinationRaycastDown = tonumber(settings.destinationRaycastDown) or 80,
         chamblerHeartbeatSeconds = tonumber(settings.chamblerHeartbeatSeconds) or 5,
         autoExportLogsToClipboard = settings.autoExportLogsToClipboard == true,
         exportIntervalSeconds = tonumber(settings.exportIntervalSeconds) or 300,
@@ -69,6 +74,15 @@ local function normalizeSettings(settings)
     end
     if settings.moveToTimeoutSeconds < 1 then
         settings.moveToTimeoutSeconds = 1
+    end
+    if settings.destinationValidationAttempts < 1 then
+        settings.destinationValidationAttempts = 1
+    end
+    if settings.destinationRaycastUp < 1 then
+        settings.destinationRaycastUp = 1
+    end
+    if settings.destinationRaycastDown < 10 then
+        settings.destinationRaycastDown = 10
     end
     if settings.chamblerHeartbeatSeconds < 1 then
         settings.chamblerHeartbeatSeconds = 1
@@ -297,17 +311,82 @@ local function executeMovementCycle()
         addLog("Ancora anti-AFK redefinida em " .. tostring(runtime.anchorPosition))
     end
 
-    local angle = math.rad(math.random(0, 360))
-    local distance = math.random(settings.roamRadiusMin, settings.roamRadiusMax)
-    local offsetX = math.cos(angle) * distance
-    local offsetZ = math.sin(angle) * distance
-    local destination = Vector3.new(
-        runtime.anchorPosition.X + offsetX,
-        runtime.anchorPosition.Y,
-        runtime.anchorPosition.Z + offsetZ
-    )
+    local function buildRawDestination()
+        local angle = math.rad(math.random(0, 360))
+        local distance = math.random(settings.roamRadiusMin, settings.roamRadiusMax)
+        local offsetX = math.cos(angle) * distance
+        local offsetZ = math.sin(angle) * distance
+        local destination = Vector3.new(
+            runtime.anchorPosition.X + offsetX,
+            runtime.anchorPosition.Y,
+            runtime.anchorPosition.Z + offsetZ
+        )
+        return destination, distance
+    end
 
-    addLog("Movimento anti-AFK para " .. tostring(math.floor(distance)) .. " studs.")
+    local function projectToGround(rawDestination)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        local filter = {}
+        if runtime.character then
+            table.insert(filter, runtime.character)
+        end
+        raycastParams.FilterDescendantsInstances = filter
+        raycastParams.IgnoreWater = false
+
+        local origin = rawDestination + Vector3.new(0, settings.destinationRaycastUp, 0)
+        local direction = Vector3.new(0, -(settings.destinationRaycastUp + settings.destinationRaycastDown), 0)
+        local hit = Workspace:Raycast(origin, direction, raycastParams)
+        if not hit then
+            return nil
+        end
+
+        -- Pequeno offset para evitar encostar exatamente na superficie.
+        return hit.Position + Vector3.new(0, 2.5, 0)
+    end
+
+    local function isReachableByPath(targetDestination)
+        if not runtime.humanoid or not runtime.root then
+            return false
+        end
+        local path = PathfindingService:CreatePath({
+            AgentRadius = 2,
+            AgentHeight = 5,
+            AgentCanJump = true,
+        })
+        local ok, err = pcall(function()
+            path:ComputeAsync(runtime.root.Position, targetDestination)
+        end)
+        if not ok then
+            reportFailure("destination_path_compute", err)
+            return false
+        end
+        if path.Status ~= Enum.PathStatus.Success then
+            return false
+        end
+
+        local waypoints = path:GetWaypoints()
+        return #waypoints > 0
+    end
+
+    local destination = nil
+    local chosenDistance = nil
+    for _ = 1, settings.destinationValidationAttempts do
+        local rawDestination, distance = buildRawDestination()
+        local grounded = projectToGround(rawDestination)
+        if grounded and isReachableByPath(grounded) then
+            destination = grounded
+            chosenDistance = distance
+            break
+        end
+    end
+
+    if not destination then
+        addLog("Nenhum destino seguro encontrado para movimento anti-AFK neste ciclo.")
+        return
+    end
+
+    addLog("Movimento anti-AFK para " .. tostring(math.floor(chosenDistance or 0)) .. " studs (destino validado).")
     local moveOk, moveErr = pcall(function()
         runtime.humanoid:MoveTo(destination)
     end)

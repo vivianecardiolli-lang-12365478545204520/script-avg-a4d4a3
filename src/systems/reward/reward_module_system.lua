@@ -7,6 +7,7 @@ local config = require("core.config")
 local StatusBus = require("core.status_bus")
 
 local RewardModuleSystem = {}
+local rng = Random.new()
 
 local warned = {}
 local runtime = {
@@ -66,7 +67,7 @@ local function randomFloat(minValue, maxValue)
     if maxValue <= minValue then
         return minValue
     end
-    return minValue + (math.random() * (maxValue - minValue))
+    return rng:NextNumber(minValue, maxValue)
 end
 
 local function waitRandom(minValue, maxValue)
@@ -218,11 +219,16 @@ local function installHooksIfNeeded(networking)
 end
 
 local function fireSyncRequests(networking)
+    local function jitterBetweenSyncRequests()
+        task.wait(rng:NextNumber(0.08, 0.20))
+    end
+
     local dailyTrigger = networking:FindFirstChild("DailyRewardEvent")
     if dailyTrigger then
         pcall(function()
             dailyTrigger:FireServer("Request")
         end)
+        jitterBetweenSyncRequests()
     end
 
     local milestones = networking:FindFirstChild("Milestones")
@@ -231,6 +237,7 @@ local function fireSyncRequests(networking)
         pcall(function()
             requestMilestonesData:FireServer()
         end)
+        jitterBetweenSyncRequests()
     end
 
     local units = networking:FindFirstChild("Units")
@@ -239,6 +246,7 @@ local function fireSyncRequests(networking)
         pcall(function()
             collectionMilestonesEvent:FireServer("RequestData")
         end)
+        jitterBetweenSyncRequests()
     end
 
     local battleEvent = networking:FindFirstChild("BattlepassEvent")
@@ -246,6 +254,7 @@ local function fireSyncRequests(networking)
         pcall(function()
             battleEvent:FireServer("RequestData")
         end)
+        jitterBetweenSyncRequests()
     end
 
     local quests = networking:FindFirstChild("Quests")
@@ -254,6 +263,7 @@ local function fireSyncRequests(networking)
         pcall(function()
             requestQuests:FireServer()
         end)
+        jitterBetweenSyncRequests()
     end
 end
 
