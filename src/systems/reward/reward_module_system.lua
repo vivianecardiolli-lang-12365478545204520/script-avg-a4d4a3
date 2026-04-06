@@ -667,7 +667,7 @@ function RewardModuleSystem.run()
     validateCriticalModules(modules)
 
     rewardLog("Sincronizando dados de rewards via remotes...")
-    rewardDetail("sincronizando dados via remotes")
+    rewardDetail("preparando dados iniciais")
     fireSyncRequests(networking)
     task.wait(settings.syncWaitSeconds)
 

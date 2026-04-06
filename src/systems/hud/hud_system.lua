@@ -535,6 +535,7 @@ local function buildHud()
     local layout = Instance.new("UIListLayout")
     layout.Name = "RuntimeOverlayContentLayout"
     layout.Parent = contentFrame
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.FillDirection = Enum.FillDirection.Vertical
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
