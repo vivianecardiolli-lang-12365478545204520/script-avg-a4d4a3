@@ -1,4 +1,4 @@
-﻿local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local config = require("core.config")
@@ -13,42 +13,73 @@ local EMOJI_TRAITS = utf8.char(0x1F52E)
 local EMOJI_STATUS = utf8.char(0x1F4CC)
 local EMOJI_FLOATING = utf8.char(0x26A1)
 
+local ROOT_NAME = "RuntimeOverlayRoot"
+local GUI_NAME = "RuntimeOverlayGui"
+
+local ROOT_BASE_SIZE = UDim2.fromScale(0.94, 0.9)
+local ROOT_BASE_POSITION = UDim2.fromScale(0.5, 0.5)
+local ROOT_BASE_BG_COLOR = Color3.fromRGB(16, 18, 24)
+local ROOT_BASE_BG_TRANSPARENCY = 0.1
+
 local hudGui
-local panel
+local rootFrame
+local contentFrame
 local floatingButton
 local closeButton
-local statusLabel
 local gemsLabel
 local levelLabel
 local traitsLabel
+local statusLabel
+
 local isMenuVisible = true
 local floatingPosition = UDim2.new(0.5, 0, 0, 26)
-local floatingWasDragged = false
-local lastDragEndedAt = 0
-local suppressNextOpenFromDrag = false
-local dragState = {
+local floatingDrag = {
     dragging = false,
-    dragStart = nil,
-    buttonStart = nil,
+    startInput = nil,
+    startPos = nil,
+    buttonStartPos = nil,
+    moved = false,
 }
+local guardingRoot = false
+local ownedRootChildren = {}
+
 local diagnostics = {
     enabled = false,
     lastLogAt = {},
     lastValueByKey = {},
 }
 
+local function getPlayer()
+    return Players.LocalPlayer
+end
+
+local function getPlayerGui()
+    local player = getPlayer()
+    return player and player:FindFirstChild("PlayerGui")
+end
+
+local function readAttribute(attributeName)
+    local player = getPlayer()
+    if not player then
+        return "0"
+    end
+    local value = player:GetAttribute(attributeName)
+    if value == nil then
+        return "0"
+    end
+    return tostring(value)
+end
+
 local function diagLog(key, message)
     if not diagnostics.enabled then
         return
     end
-
     local now = os.clock()
     local minInterval = 0.15
     local lastAt = diagnostics.lastLogAt[key] or 0
     if now - lastAt < minInterval then
         return
     end
-
     diagnostics.lastLogAt[key] = now
     Logger.log("[HUD-DIAG] " .. tostring(message))
 end
@@ -87,79 +118,10 @@ local function watchProperty(instance, instanceName, propertyName, formatter)
     instance:GetPropertyChangedSignal(propertyName):Connect(emit)
 end
 
-local function attachDiagnostics()
-    diagnostics.enabled = config.hud and config.hud.diagnosticsEnabled == true
-    if not diagnostics.enabled then
-        return
-    end
-
-    diagnostics.lastLogAt = {}
-    diagnostics.lastValueByKey = {}
-    diagLog("boot", "Diagnostico de HUD ativado.")
-
-    watchProperty(panel, "RuntimeOverlayRoot", "Size", udim2ToString)
-    watchProperty(panel, "RuntimeOverlayRoot", "Position", udim2ToString)
-    watchProperty(panel, "RuntimeOverlayRoot", "BackgroundTransparency", tostring)
-    watchProperty(panel, "RuntimeOverlayRoot", "BackgroundColor3", colorToString)
-    watchProperty(panel, "RuntimeOverlayRoot", "Visible", tostring)
-
-    watchProperty(closeButton, "RuntimeOverlayClose", "AutoButtonColor", tostring)
-    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundTransparency", tostring)
-    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundColor3", colorToString)
-    watchProperty(closeButton, "RuntimeOverlayClose", "Size", udim2ToString)
-
-    watchProperty(floatingButton, "RuntimeOverlayFloating", "Visible", tostring)
-    watchProperty(floatingButton, "RuntimeOverlayFloating", "Position", udim2ToString)
-
-    panel.ChildAdded:Connect(function(child)
-        diagLog("panel.child_added", "RuntimeOverlayRoot.ChildAdded -> " .. child.ClassName .. " (" .. child.Name .. ")")
-    end)
-    panel.DescendantAdded:Connect(function(desc)
-        if desc:IsA("UIScale") or desc:IsA("UIPadding") or desc:IsA("UIAspectRatioConstraint") then
-            diagLog("panel.desc_added", "RuntimeOverlayRoot.DescendantAdded -> " .. desc.ClassName .. " (" .. desc.Name .. ")")
-        end
-    end)
-
-    closeButton.MouseEnter:Connect(function()
-        diagLog("close.hover.enter", "RuntimeOverlayClose.MouseEnter")
-    end)
-    closeButton.MouseLeave:Connect(function()
-        diagLog("close.hover.leave", "RuntimeOverlayClose.MouseLeave")
-    end)
-    panel.MouseEnter:Connect(function()
-        diagLog("panel.hover.enter", "RuntimeOverlayRoot.MouseEnter")
-    end)
-    panel.MouseLeave:Connect(function()
-        diagLog("panel.hover.leave", "RuntimeOverlayRoot.MouseLeave")
-    end)
-end
-
-local function getPlayer()
-    return Players.LocalPlayer
-end
-
-local function getPlayerGui()
-    local player = getPlayer()
-    return player and player:FindFirstChild("PlayerGui")
-end
-
-local function readAttribute(attributeName)
-    local player = getPlayer()
-    if not player then
-        return "0"
-    end
-    local value = player:GetAttribute(attributeName)
-    if value == nil then
-        return "0"
-    end
-    return tostring(value)
-end
-
 local function clampFloatingToViewport()
     if not hudGui or not floatingButton then
         return
     end
-
     local viewport = hudGui.AbsoluteSize
     local size = floatingButton.AbsoluteSize
     local x = floatingButton.Position.X.Offset
@@ -188,43 +150,40 @@ local function clampFloatingToViewport()
     floatingButton.Position = floatingPosition
 end
 
-local function applyVisibility()
-    if panel then
-        panel.Visible = isMenuVisible
+local function updateTextSizing()
+    if not rootFrame then
+        return
     end
-    if floatingButton then
-        floatingButton.Visible = not isMenuVisible
-        if not isMenuVisible then
-            if not floatingWasDragged then
-                floatingButton.Position = floatingPosition
-            end
-            clampFloatingToViewport()
-        end
+
+    local h = rootFrame.AbsoluteSize.Y
+    local baseSize = math.floor(math.clamp(h * 0.075, 34, 72))
+    local statusSize = math.floor(math.clamp(baseSize * 0.92, 30, 66))
+
+    if gemsLabel then
+        gemsLabel.TextSize = baseSize
+    end
+    if levelLabel then
+        levelLabel.TextSize = baseSize
+    end
+    if traitsLabel then
+        traitsLabel.TextSize = baseSize
+    end
+    if statusLabel then
+        statusLabel.TextSize = statusSize
     end
 end
 
-local function makeValueLabel(name, text, parent)
-    local label = Instance.new("TextLabel")
-    label.Name = name
-    label.Parent = parent
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, 0, 0, 86)
-    label.Font = Enum.Font.GothamBold
-    label.TextScaled = false
-    label.TextSize = 56
-    label.TextWrapped = false
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.TextColor3 = Color3.fromRGB(240, 240, 240)
-    label.Text = text
-    label.ZIndex = 10001
-
-    local textConstraint = Instance.new("UITextSizeConstraint")
-    textConstraint.MinTextSize = 34
-    textConstraint.MaxTextSize = 64
-    textConstraint.Parent = label
-
-    return label
+local function applyVisibility()
+    if rootFrame then
+        rootFrame.Visible = isMenuVisible
+    end
+    if floatingButton then
+        floatingButton.Visible = not isMenuVisible
+        if floatingButton.Visible then
+            floatingButton.Position = floatingPosition
+            clampFloatingToViewport()
+        end
+    end
 end
 
 local function setStatusText(statusText)
@@ -263,65 +222,142 @@ local function toggleMenu()
     end
 end
 
-local function bindFloatingDrag()
-    floatingButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragState.dragging = true
-            dragState.dragStart = input.Position
-            dragState.buttonStart = floatingButton.Position
-            floatingWasDragged = false
+local function enforceRootGuard()
+    if not rootFrame or guardingRoot then
+        return
+    end
+
+    guardingRoot = true
+
+    if rootFrame.Size ~= ROOT_BASE_SIZE then
+        rootFrame.Size = ROOT_BASE_SIZE
+    end
+    if rootFrame.Position ~= ROOT_BASE_POSITION then
+        rootFrame.Position = ROOT_BASE_POSITION
+    end
+    if rootFrame.BackgroundColor3 ~= ROOT_BASE_BG_COLOR then
+        rootFrame.BackgroundColor3 = ROOT_BASE_BG_COLOR
+    end
+    if rootFrame.BackgroundTransparency ~= ROOT_BASE_BG_TRANSPARENCY then
+        rootFrame.BackgroundTransparency = ROOT_BASE_BG_TRANSPARENCY
+    end
+
+    for _, child in ipairs(rootFrame:GetChildren()) do
+        if not ownedRootChildren[child] then
+            diagLog("guard.remove_child", "Removendo filho injetado em RuntimeOverlayRoot: " .. child.ClassName .. " (" .. child.Name .. ")")
+            child:Destroy()
         end
+    end
+
+    guardingRoot = false
+end
+
+local function bindRootGuard()
+    if not rootFrame then
+        return
+    end
+
+    rootFrame:GetPropertyChangedSignal("Size"):Connect(function()
+        enforceRootGuard()
+    end)
+    rootFrame:GetPropertyChangedSignal("Position"):Connect(function()
+        enforceRootGuard()
+    end)
+    rootFrame:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+        enforceRootGuard()
+    end)
+    rootFrame:GetPropertyChangedSignal("BackgroundTransparency"):Connect(function()
+        enforceRootGuard()
     end)
 
-    floatingButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragState.lastInput = input
+    rootFrame.ChildAdded:Connect(function()
+        enforceRootGuard()
+    end)
+end
+
+local function makeValueLabel(name, text, parent)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.Parent = parent
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, 0, 0, 0)
+    label.AutomaticSize = Enum.AutomaticSize.Y
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = false
+    label.TextSize = 56
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    label.Text = text
+    label.ZIndex = 10001
+
+    local textConstraint = Instance.new("UITextSizeConstraint")
+    textConstraint.MinTextSize = 30
+    textConstraint.MaxTextSize = 72
+    textConstraint.Parent = label
+
+    return label
+end
+
+local function bindFloatingDragAndTap()
+    floatingButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            floatingDrag.dragging = true
+            floatingDrag.startInput = input
+            floatingDrag.startPos = input.Position
+            floatingDrag.buttonStartPos = floatingButton.Position
+            floatingDrag.moved = false
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if not dragState.dragging then
-            return
-        end
-        if not (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if not floatingDrag.dragging then
             return
         end
 
-        local delta = input.Position - dragState.dragStart
+        local isMouseDrag = floatingDrag.startInput and floatingDrag.startInput.UserInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouchDrag = floatingDrag.startInput and floatingDrag.startInput.UserInputType == Enum.UserInputType.Touch
+            and input.UserInputType == Enum.UserInputType.Touch
+
+        if not isMouseDrag and not isTouchDrag then
+            return
+        end
+
+        local delta = input.Position - floatingDrag.startPos
         if delta.Magnitude > 4 then
-            floatingWasDragged = true
+            floatingDrag.moved = true
         end
 
         floatingButton.Position = UDim2.new(
             0,
-            dragState.buttonStart.X.Offset + delta.X,
+            floatingDrag.buttonStartPos.X.Offset + delta.X,
             0,
-            dragState.buttonStart.Y.Offset + delta.Y
+            floatingDrag.buttonStartPos.Y.Offset + delta.Y
         )
         clampFloatingToViewport()
     end)
 
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragState.dragging = false
-            if floatingButton then
-                floatingPosition = floatingButton.Position
-            end
-            if floatingWasDragged then
-                lastDragEndedAt = os.clock()
-                suppressNextOpenFromDrag = true
-            else
-                suppressNextOpenFromDrag = false
-            end
-        end
-    end)
-
-    floatingButton.Activated:Connect(function()
-        if suppressNextOpenFromDrag and os.clock() - lastDragEndedAt < 0.25 then
-            suppressNextOpenFromDrag = false
+        if not floatingDrag.dragging then
             return
         end
-        openMenu()
+
+        local endedMouse = input.UserInputType == Enum.UserInputType.MouseButton1 and floatingDrag.startInput and floatingDrag.startInput.UserInputType == Enum.UserInputType.MouseButton1
+        local endedTouch = input.UserInputType == Enum.UserInputType.Touch and floatingDrag.startInput and floatingDrag.startInput.UserInputType == Enum.UserInputType.Touch
+        if not endedMouse and not endedTouch then
+            return
+        end
+
+        floatingDrag.dragging = false
+        floatingPosition = floatingButton.Position
+
+        if not floatingDrag.moved then
+            openMenu()
+        end
+
+        floatingDrag.startInput = nil
     end)
 end
 
@@ -343,52 +379,98 @@ local function bindToggleKey()
     end)
 end
 
+local function attachDiagnostics()
+    diagnostics.enabled = config.hud and config.hud.diagnosticsEnabled == true
+    if not diagnostics.enabled then
+        return
+    end
+
+    diagnostics.lastLogAt = {}
+    diagnostics.lastValueByKey = {}
+    diagLog("boot", "Diagnostico de HUD ativado.")
+
+    watchProperty(rootFrame, ROOT_NAME, "Size", udim2ToString)
+    watchProperty(rootFrame, ROOT_NAME, "Position", udim2ToString)
+    watchProperty(rootFrame, ROOT_NAME, "BackgroundTransparency", tostring)
+    watchProperty(rootFrame, ROOT_NAME, "BackgroundColor3", colorToString)
+    watchProperty(rootFrame, ROOT_NAME, "Visible", tostring)
+
+    watchProperty(closeButton, "RuntimeOverlayClose", "AutoButtonColor", tostring)
+    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundTransparency", tostring)
+    watchProperty(closeButton, "RuntimeOverlayClose", "BackgroundColor3", colorToString)
+    watchProperty(closeButton, "RuntimeOverlayClose", "Size", udim2ToString)
+
+    watchProperty(floatingButton, "RuntimeOverlayFloating", "Visible", tostring)
+    watchProperty(floatingButton, "RuntimeOverlayFloating", "Position", udim2ToString)
+
+    rootFrame.ChildAdded:Connect(function(child)
+        diagLog("root.child_added", ROOT_NAME .. ".ChildAdded -> " .. child.ClassName .. " (" .. child.Name .. ")")
+    end)
+
+    closeButton.MouseEnter:Connect(function()
+        diagLog("close.hover.enter", "RuntimeOverlayClose.MouseEnter")
+    end)
+    closeButton.MouseLeave:Connect(function()
+        diagLog("close.hover.leave", "RuntimeOverlayClose.MouseLeave")
+    end)
+    rootFrame.MouseEnter:Connect(function()
+        diagLog("root.hover.enter", ROOT_NAME .. ".MouseEnter")
+    end)
+    rootFrame.MouseLeave:Connect(function()
+        diagLog("root.hover.leave", ROOT_NAME .. ".MouseLeave")
+    end)
+end
+
 local function buildHud()
     local playerGui = getPlayerGui()
     if not playerGui then
         return
     end
 
-    local existing = playerGui:FindFirstChild("RuntimeOverlayGui")
+    local existing = playerGui:FindFirstChild(GUI_NAME)
     if existing and existing:IsA("ScreenGui") then
         existing:Destroy()
     end
 
     hudGui = Instance.new("ScreenGui")
-    hudGui.Name = "RuntimeOverlayGui"
+    hudGui.Name = GUI_NAME
     hudGui.ResetOnSpawn = false
     hudGui.DisplayOrder = 999999
     hudGui.IgnoreGuiInset = true
     hudGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     hudGui.Parent = playerGui
 
-    panel = Instance.new("Frame")
-    panel.Name = "RuntimeOverlayRoot"
-    panel.Parent = hudGui
-    panel.AnchorPoint = Vector2.new(0.5, 0.5)
-    panel.Position = UDim2.fromScale(0.5, 0.5)
-    panel.Size = UDim2.fromScale(0.94, 0.9)
-    panel.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
-    panel.BackgroundTransparency = 0.1
-    panel.ZIndex = 10000
+    rootFrame = Instance.new("Frame")
+    rootFrame.Name = ROOT_NAME
+    rootFrame.Parent = hudGui
+    rootFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    rootFrame.Position = ROOT_BASE_POSITION
+    rootFrame.Size = ROOT_BASE_SIZE
+    rootFrame.BackgroundColor3 = ROOT_BASE_BG_COLOR
+    rootFrame.BackgroundTransparency = ROOT_BASE_BG_TRANSPARENCY
+    rootFrame.ZIndex = 10000
+    rootFrame.ClipsDescendants = true
 
     local sizeConstraint = Instance.new("UISizeConstraint")
+    sizeConstraint.Name = "RuntimeOverlaySizeConstraint"
     sizeConstraint.MinSize = Vector2.new(620, 460)
     sizeConstraint.MaxSize = Vector2.new(2200, 1600)
-    sizeConstraint.Parent = panel
+    sizeConstraint.Parent = rootFrame
 
     local corner = Instance.new("UICorner")
+    corner.Name = "RuntimeOverlayCorner"
     corner.CornerRadius = UDim.new(0, 18)
-    corner.Parent = panel
+    corner.Parent = rootFrame
 
     local stroke = Instance.new("UIStroke")
+    stroke.Name = "RuntimeOverlayStroke"
     stroke.Thickness = 2
     stroke.Color = Color3.fromRGB(88, 98, 122)
-    stroke.Parent = panel
+    stroke.Parent = rootFrame
 
     closeButton = Instance.new("TextButton")
     closeButton.Name = "RuntimeOverlayClose"
-    closeButton.Parent = panel
+    closeButton.Parent = rootFrame
     closeButton.AnchorPoint = Vector2.new(1, 0)
     closeButton.Position = UDim2.new(1, -18, 0, 14)
     closeButton.Size = UDim2.fromOffset(56, 56)
@@ -401,33 +483,37 @@ local function buildHud()
     closeButton.ZIndex = 10003
 
     local closeCorner = Instance.new("UICorner")
+    closeCorner.Name = "RuntimeOverlayCloseCorner"
     closeCorner.CornerRadius = UDim.new(1, 0)
     closeCorner.Parent = closeButton
 
     local closeStroke = Instance.new("UIStroke")
+    closeStroke.Name = "RuntimeOverlayCloseStroke"
     closeStroke.Thickness = 1.5
     closeStroke.Color = Color3.fromRGB(95, 110, 140)
     closeStroke.Parent = closeButton
 
-    local content = Instance.new("Frame")
-    content.Name = "RuntimeOverlayContent"
-    content.Parent = panel
-    content.BackgroundTransparency = 1
-    content.Position = UDim2.new(0, 28, 0, 84)
-    content.Size = UDim2.new(1, -56, 1, -110)
-    content.ZIndex = 10001
+    contentFrame = Instance.new("Frame")
+    contentFrame.Name = "RuntimeOverlayContent"
+    contentFrame.Parent = rootFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Position = UDim2.new(0, 28, 0, 84)
+    contentFrame.Size = UDim2.new(1, -56, 1, -110)
+    contentFrame.ZIndex = 10001
+    contentFrame.ClipsDescendants = true
 
     local layout = Instance.new("UIListLayout")
-    layout.Parent = content
+    layout.Name = "RuntimeOverlayContentLayout"
+    layout.Parent = contentFrame
     layout.FillDirection = Enum.FillDirection.Vertical
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
-    layout.Padding = UDim.new(0, 16)
+    layout.Padding = UDim.new(0, 14)
 
-    gemsLabel = makeValueLabel("RuntimeOverlayStatsGems", string.format("%s Gemas: 0", EMOJI_GEMS), content)
-    levelLabel = makeValueLabel("RuntimeOverlayStatsLevel", string.format("%s Level: 0", EMOJI_LEVEL), content)
-    traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), content)
-    statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), content)
+    gemsLabel = makeValueLabel("RuntimeOverlayStatsGems", string.format("%s Gemas: 0", EMOJI_GEMS), contentFrame)
+    levelLabel = makeValueLabel("RuntimeOverlayStatsLevel", string.format("%s Level: 0", EMOJI_LEVEL), contentFrame)
+    traitsLabel = makeValueLabel("RuntimeOverlayStatsTraits", string.format("%s Traits: 0", EMOJI_TRAITS), contentFrame)
+    statusLabel = makeValueLabel("RuntimeOverlayStatus", string.format("%s Status: Idle", EMOJI_STATUS), contentFrame)
 
     closeButton.Activated:Connect(function()
         closeMenu()
@@ -451,15 +537,26 @@ local function buildHud()
     floatingButton.Visible = false
 
     local floatingCorner = Instance.new("UICorner")
+    floatingCorner.Name = "RuntimeOverlayFloatingCorner"
     floatingCorner.CornerRadius = UDim.new(1, 0)
     floatingCorner.Parent = floatingButton
 
     local floatingStroke = Instance.new("UIStroke")
+    floatingStroke.Name = "RuntimeOverlayFloatingStroke"
     floatingStroke.Thickness = 1.5
     floatingStroke.Color = Color3.fromRGB(110, 125, 160)
     floatingStroke.Parent = floatingButton
 
-    bindFloatingDrag()
+    ownedRootChildren = {
+        [sizeConstraint] = true,
+        [corner] = true,
+        [stroke] = true,
+        [closeButton] = true,
+        [contentFrame] = true,
+    }
+
+    bindRootGuard()
+    bindFloatingDragAndTap()
 end
 
 function HudSystem.setStatus(statusText)
@@ -473,10 +570,12 @@ function HudSystem.start()
 
     buildHud()
     attachDiagnostics()
+    updateTextSizing()
     refreshValues()
     setStatusText(StatusBus.get())
     bindToggleKey()
     applyVisibility()
+    enforceRootGuard()
 
     StatusBus.subscribe(function(newStatus)
         setStatusText(newStatus)
@@ -487,6 +586,12 @@ function HudSystem.start()
         player:GetAttributeChangedSignal("Gems"):Connect(refreshValues)
         player:GetAttributeChangedSignal("Level"):Connect(refreshValues)
         player:GetAttributeChangedSignal("TraitRerolls"):Connect(refreshValues)
+    end
+
+    if rootFrame then
+        rootFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            updateTextSizing()
+        end)
     end
 
     if hudGui then
